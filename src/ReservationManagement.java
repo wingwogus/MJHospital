@@ -1,4 +1,4 @@
-package PACKAGE_NAME;
+import javax.swing.*;
 
-public class ReservationManagement {
+public class ReservationManagement extends JFrame {
 }

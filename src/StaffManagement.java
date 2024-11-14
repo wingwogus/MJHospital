@@ -1,4 +1,4 @@
-package PACKAGE_NAME;
+import javax.swing.*;
 
-public class StaffManagement {
+public class StaffManagement extends JFrame {
 }

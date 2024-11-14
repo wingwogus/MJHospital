@@ -1,4 +1,7 @@
-package PACKAGE_NAME;
+import javax.swing.*;
 
-public class Consultation {
+public class Consultation extends JFrame {
+    public Consultation() {
+
+    }
 }
