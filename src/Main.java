@@ -7,7 +7,6 @@ public class Main {
     public static void main(String[] args) {
         HospitalUI frame = new HospitalUI();
         frame.setVisible(true);
-        System.out.println("이건 feature login");
     }
 
     static class HospitalUI extends JFrame {
