@@ -113,18 +113,26 @@ class PatientListPanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("환자 목록"));
 
-        String[] columnNames = {"번호", "주민번호"};
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.setPreferredSize(new Dimension(200, 600));
+        String[] columnNames = {"환자명", "주민번호"};
         Object[][] data = {
-                {"1", "000000-0000000"},
-                {"2", "000000-0000000"},
-                {"3", "000000-0000000"},
-                {"4", "000000-0000000"},
-                {"5", "000000-0000000"}
+                {"이재현", "000000-0000000"},
+                {"성시환", "000000-0000000"},
+                {"김건우", "000000-0000000"},
+                {"서준원", "000000-0000000"},
+                {"김경준", "000000-0000000"}
         };
 
         JTable table = new JTable(data, columnNames);
+        table.setDefaultEditor(Object.class, null);
+
+        table.getColumnModel().getColumn(0).setPreferredWidth(50);
+        table.getColumnModel().getColumn(1).setPreferredWidth(150);
         JScrollPane scrollPane = new JScrollPane(table);
-        add(scrollPane, BorderLayout.CENTER);
+
+        tablePanel.add(scrollPane);
+        add(tablePanel, BorderLayout.CENTER);
     }
 }
 
@@ -203,6 +211,5 @@ class PatientDetailsPanel extends JPanel {
 
         gbc.gridy++;
         add(new JTextField(15), gbc);
-
     }
 }
