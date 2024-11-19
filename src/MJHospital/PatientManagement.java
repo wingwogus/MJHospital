@@ -5,8 +5,6 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
-import java.util.NoSuchElementException;
-import java.util.StringTokenizer;
 import java.util.Vector;
 
 class PatientManagement extends JPanel {
