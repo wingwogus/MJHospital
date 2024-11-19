@@ -3,10 +3,11 @@ package MJHospital;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.*;
 import java.sql.*;
-import java.util.ArrayList;
+import java.util.NoSuchElementException;
+import java.util.StringTokenizer;
+import java.util.Vector;
 
 class PatientManagement extends JPanel {
     Connection conn;
@@ -29,6 +30,7 @@ class PatientManagement extends JPanel {
         patientDetailsPanel = new PatientDetailsPanel(conn, st);
         patientListPanel = new PatientListPanel(patientDetailsPanel);
         patientConditionPanel = new PatientConditionPanel(patientListPanel, conn, st);
+
         patientDetailsPanel.setPatientListPanel(patientListPanel);
 
         // 환자 조건 패널 생성
@@ -43,10 +45,11 @@ class PatientManagement extends JPanel {
     }
 }
 
-class PatientConditionPanel extends JPanel {
+class PatientConditionPanel extends JPanel implements ActionListener {
     Connection conn;
     Statement st;
     PatientListPanel patientListPanel;
+    JTextField nameField, idField, genderField, phoneField, bloodTypeField, addressField, heightField, weightField;
     public PatientConditionPanel(PatientListPanel patientListPanel, Connection conn, Statement st) {
         this.patientListPanel = patientListPanel;
         this.conn = conn;
@@ -75,15 +78,15 @@ class PatientConditionPanel extends JPanel {
         // 두 번째 열 (이름 입력 필드, 주민번호 입력 필드, 성별 입력 필드)
         gbc.gridx = 1;
         gbc.gridy = 0;
-        JTextField nameField = new JTextField(10);
+        nameField = new JTextField(10);
         patientInfoPanel.add(nameField, gbc);
 
         gbc.gridy++;
-        JTextField idField = new JTextField(10);
+        idField = new JTextField(10);
         patientInfoPanel.add(idField, gbc);
 
         gbc.gridy++;
-        JTextField genderField = new JTextField(10);
+        genderField = new JTextField(10);
         patientInfoPanel.add(genderField, gbc);
 
         // 세 번째 열 (전화번호, 혈액형, 주소)
@@ -100,15 +103,15 @@ class PatientConditionPanel extends JPanel {
         // 네 번째 열 (전화번호 입력 필드, 혈액형 입력 필드, 주소 입력 필드)
         gbc.gridx = 3;
         gbc.gridy = 0;
-        JTextField phoneField = new JTextField(10);
+        phoneField = new JTextField(10);
         patientInfoPanel.add(phoneField, gbc);
 
         gbc.gridy++;
-        JTextField bloodTypeField = new JTextField(10);
+        bloodTypeField = new JTextField(10);
         patientInfoPanel.add(bloodTypeField, gbc);
 
         gbc.gridy++;
-        JTextField addressField = new JTextField(10);
+        addressField = new JTextField(10);
         patientInfoPanel.add(addressField, gbc);
 
         // 다섯 번째 열 (키, 몸무게, 추가 버튼)
@@ -122,16 +125,18 @@ class PatientConditionPanel extends JPanel {
         gbc.gridy++;
         gbc.gridwidth = 2; // 추가 버튼을 두 칸으로 확장
         gbc.fill = GridBagConstraints.BOTH;
-        patientInfoPanel.add(new JButton("추가"), gbc);
+        JButton addButton = new JButton("추가");
+        addButton.addActionListener(this);
+        patientInfoPanel.add(addButton, gbc);
 
         // 여섯 번째 열 (키 입력 필드, 몸무게 입력 필드)
         gbc.gridx = 5;
         gbc.gridy = 0;
-        JTextField heightField = new JTextField(10);
+        heightField = new JTextField(10);
         patientInfoPanel.add(heightField, gbc);
 
         gbc.gridy++;
-        JTextField weightField = new JTextField(10);
+        weightField = new JTextField(10);
         patientInfoPanel.add(weightField, gbc);
 
         // 여섯 번째 열 (검색 버튼) - 검색 버튼이 다른 요소와 겹치지 않도록 설정
@@ -140,11 +145,15 @@ class PatientConditionPanel extends JPanel {
         gbc.gridheight = 3; // 검색 버튼이 세 줄을 차지하도록 설정
         gbc.fill = GridBagConstraints.VERTICAL; // 버튼의 높이가 세 줄을 차지하도록 설정
         JButton searchButton = new JButton("검색");
+        searchButton.addActionListener(this);
         patientInfoPanel.add(searchButton, gbc);
 
         add(patientInfoPanel, BorderLayout.CENTER);
+    }
 
-        searchButton.addActionListener(e -> {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getActionCommand().equals("검색")) {
             String name = nameField.getText();
             String id = idField.getText();
             String gender = genderField.getText();
@@ -159,31 +168,28 @@ class PatientConditionPanel extends JPanel {
             if (!name.isEmpty()) query += " AND name LIKE '%" + name + "%'";
             if (!id.isEmpty()) query += " AND identitynumber LIKE '%" + id + "%'";
             if (!gender.isEmpty()) query += " AND gender LIKE '%" + gender + "%'";
-            if (!phone.isEmpty()) query += " AND tel3 LIKE '%" + phone + "%'";
+            if (!phone.isEmpty()) query += " AND phone LIKE '%" + phone + "%'";
             if (!bloodType.isEmpty()) query += " AND bloodType LIKE '%" + bloodType + "%'";
             if (!address.isEmpty()) query += " AND address LIKE '%" + address + "%'";
             if (!height.isEmpty()) query += " AND height LIKE '%" + height + "%'";
             if (!weight.isEmpty()) query += " AND weight LIKE '%" + weight + "%'";
 
             try (ResultSet rs = st.executeQuery(query)) {
-                ArrayList<Object[]> dataList = new ArrayList<>();
+                Vector<Vector<String>> dataVector = new Vector<>();
                 while (rs.next()) {
-                    Object[] row = new Object[2];
-                    row[0] = rs.getString("name");
-                    row[1] = rs.getString("identitynumber");
-                    dataList.add(row);
+                    Vector<String> row = new Vector<>();
+                    row.add(rs.getString("name"));
+                    row.add(rs.getString("identitynumber"));
+                    dataVector.add(row);
                 }
 
-                Object[][] resultData = new Object[dataList.size()][2];
-                for (int i = 0; i < dataList.size(); i++) {
-                    resultData[i] = dataList.get(i);
-                }
-
-                patientListPanel.setData(resultData);
+                patientListPanel.setData(dataVector);
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-        });
+        } else if (e.getActionCommand().equals("추가")) {
+            new PatientAddWindow(conn).setVisible(true);
+        }
     }
 }
 
@@ -218,9 +224,9 @@ class PatientListPanel extends JPanel implements MouseListener {
         table.addMouseListener(this);
     }
 
-    public void setData(Object[][] inputData) {
+    public void setData(Vector<Vector<String>> inputData) {
         tableModel.setRowCount(0);
-        for (Object[] row : inputData) {
+        for (Vector<String> row : inputData) {
             tableModel.addRow(row);
         }
     }
@@ -354,18 +360,18 @@ class PatientDetailsPanel extends JPanel {
 
     public void setData(String id) {
         String query = "SELECT * FROM patient WHERE identitynumber = '" + id + "'";
-        try (ResultSet rs = st.executeQuery(query)) {
+        try(ResultSet rs = st.executeQuery(query)) {
             rs.next();
             nameField.setText(rs.getString("name"));
             idField.setText(rs.getString("identitynumber"));
             genderField.setText(rs.getString("gender"));
             bloodTypeField.setText(rs.getString("bloodtype"));
             cautionArea.setText(rs.getString("caution"));
-            phoneField.setText(rs.getString("tel1")+rs.getString("tel2")+rs.getString("tel3"));
+            phoneField.setText(rs.getString("phone"));
             heightField.setText(rs.getString("height"));
             weightField.setText(rs.getString("weight"));
             addressField.setText(rs.getString("address"));
-        }catch (SQLException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
@@ -375,5 +381,151 @@ class PatientDetailsPanel extends JPanel {
     }
 }
 
+class PatientAddWindow extends JFrame implements ActionListener{
+    Connection conn;
+    JTextField nameField, phoneField, idField1, idField2, heightField, genderField, weightField, bloodTypeField, addressField;
+    JTextArea cautionArea;
 
+    public PatientAddWindow(Connection conn) {
+        this.conn = conn;
+
+        setTitle("환자 추가");
+        setSize(600, 500);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new BorderLayout());
+        titlePanel.setBackground(Color.LIGHT_GRAY);
+
+        JLabel titleLabel = new JLabel("환자 추가");
+        titleLabel.setFont(new Font("Serif", Font.BOLD, 30));
+        titlePanel.add(titleLabel, BorderLayout.NORTH);
+
+        add(titlePanel, BorderLayout.NORTH);
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(null);
+
+        // Left column components
+        JLabel nameLabel = new JLabel("*이름");
+        nameLabel.setBounds(20, 80, 80, 30);
+        mainPanel.add(nameLabel);
+
+        nameField = new JTextField(5);
+        nameField.setBounds(120, 80, 150, 30);
+        mainPanel.add(nameField);
+
+        JLabel idLabel = new JLabel("*주민번호");
+        idLabel.setBounds(20, 130, 80, 30);
+        mainPanel.add(idLabel);
+
+        idField1 = new JTextField(6);
+        idField1.setBounds(120, 130, 70, 30);
+        mainPanel.add(idField1);
+
+        JLabel bar = new JLabel("-");
+        bar.setBounds(193, 130, 4, 30);
+        mainPanel.add(bar);
+
+        idField2 = new JTextField(7);
+        idField2.setBounds(200, 130, 70, 30);
+        mainPanel.add(idField2);
+
+        JLabel genderLabel = new JLabel("*성별");
+        genderLabel.setBounds(20, 180, 80, 30);
+        mainPanel.add(genderLabel);
+
+        genderField = new JTextField(3);
+        genderField.setBounds(120, 180, 150, 30);
+        mainPanel.add(genderField);
+
+        JLabel bloodTypeLabel = new JLabel("혈액형");
+        bloodTypeLabel.setBounds(20, 230, 80, 30);
+        mainPanel.add(bloodTypeLabel);
+
+        bloodTypeField = new JTextField();
+        bloodTypeField.setBounds(120, 230, 150, 30);
+        mainPanel.add(bloodTypeField);
+
+        JLabel cautionLabel = new JLabel("주의사항");
+        cautionLabel.setBounds(20, 280, 80, 30);
+        mainPanel.add(cautionLabel);
+
+        cautionArea = new JTextArea(15, 20);
+        cautionArea.setBounds(120, 280, 150, 100);
+        mainPanel.add(cautionArea);
+
+        // Right column components
+        JLabel phoneLabel = new JLabel("연락처");
+        phoneLabel.setBounds(320, 80, 80, 30);
+        mainPanel.add(phoneLabel);
+
+        phoneField = new JTextField();
+        phoneField.setBounds(420, 80, 150, 30);
+        mainPanel.add(phoneField);
+
+        JLabel heightLabel = new JLabel("키");
+        heightLabel.setBounds(320, 130, 80, 30);
+        mainPanel.add(heightLabel);
+
+        heightField = new JTextField();
+        heightField.setBounds(420, 130, 150, 30);
+        mainPanel.add(heightField);
+
+        JLabel weightLabel = new JLabel("몸무게");
+        weightLabel.setBounds(320, 180, 80, 30);
+        mainPanel.add(weightLabel);
+
+        weightField = new JTextField();
+        weightField.setBounds(420, 180, 150, 30);
+        mainPanel.add(weightField);
+
+        JLabel addressLabel = new JLabel("주소");
+        addressLabel.setBounds(320, 230, 80, 30);
+        mainPanel.add(addressLabel);
+
+        addressField = new JTextField();
+        addressField.setBounds(420, 230, 150, 30);
+        mainPanel.add(addressField);
+
+        JButton addButton = new JButton("추가");
+        addButton.addActionListener(this);
+        addButton.setBounds(320, 280, 150, 30);
+        mainPanel.add(addButton);
+
+        add(mainPanel, BorderLayout.CENTER);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        String query = "INSERT INTO patient(name, tel1, identitynumber, caution, address, bloodType, gender, height, weight) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        try {
+            PreparedStatement pstm = conn.prepareStatement(query);
+            if (nameField.getText().isEmpty() || idField1.getText().isEmpty() || genderField.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "필수 사항은 입력하셔야 합니다.");
+            } else {
+                pstm.setString(1, nameField.getText());
+                pstm.setString(2, phoneField.getText());
+                pstm.setString(3, idField1.getText() + "-" + idField2.getText());
+                pstm.setString(4, cautionArea.getText());
+                pstm.setString(5, addressField.getText());
+                pstm.setString(6, bloodTypeField.getText());
+                pstm.setString(7, genderField.getText());
+                pstm.setInt(8, Integer.parseInt(heightField.getText()));
+                pstm.setInt(9, Integer.parseInt(weightField.getText()));
+
+                if (pstm.executeUpdate() > 0) {
+                    JOptionPane.showMessageDialog(null, "삽입 성공");
+                } else {
+                    JOptionPane.showMessageDialog(null, "실패");
+                }
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("오류");
+        }
+    }
+}
 
