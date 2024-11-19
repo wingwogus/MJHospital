@@ -12,6 +12,7 @@ class Login extends JFrame implements ActionListener {
         setSize(800,800);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
+        setLocationRelativeTo(null);
 
         JPanel logoPanel = new JPanel();
         logoPanel.setLayout(new BorderLayout());
