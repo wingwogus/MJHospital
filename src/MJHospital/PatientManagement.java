@@ -381,8 +381,9 @@ class PatientDetailsPanel extends JPanel {
 
 class PatientAddWindow extends JFrame implements ActionListener{
     Connection conn;
-    JTextField nameField, phoneField, idField1, idField2, heightField, genderField, weightField, bloodTypeField, addressField;
+    JTextField nameField, phoneField, idField1, idField2, heightField, weightField, addressField;
     JTextArea cautionArea;
+    JRadioButton male, female, A, B, O, AB;
 
     public PatientAddWindow(Connection conn) {
         this.conn = conn;
@@ -434,17 +435,41 @@ class PatientAddWindow extends JFrame implements ActionListener{
         genderLabel.setBounds(20, 180, 80, 30);
         mainPanel.add(genderLabel);
 
-        genderField = new JTextField(3);
-        genderField.setBounds(120, 180, 150, 30);
-        mainPanel.add(genderField);
+        ButtonGroup genderGroup = new ButtonGroup();
+        male = new JRadioButton("남");
+        male.setSelected(true);
+        female = new JRadioButton("여");
+
+        genderGroup.add(male);
+        genderGroup.add(female);
+
+        male.setBounds(120, 180, 70, 30);
+        female.setBounds(200, 180, 70, 30);
+        mainPanel.add(male);
+        mainPanel.add(female);
 
         JLabel bloodTypeLabel = new JLabel("혈액형");
         bloodTypeLabel.setBounds(20, 230, 80, 30);
         mainPanel.add(bloodTypeLabel);
 
-        bloodTypeField = new JTextField();
-        bloodTypeField.setBounds(120, 230, 150, 30);
-        mainPanel.add(bloodTypeField);
+        ButtonGroup bloodGroup = new ButtonGroup();
+        A = new JRadioButton("A");
+        B = new JRadioButton("B");
+        O = new JRadioButton("O");
+        AB = new JRadioButton("AB");
+        bloodGroup.add(A);
+        bloodGroup.add(B);
+        bloodGroup.add(O);
+        bloodGroup.add(AB);
+
+        A.setBounds(120, 230, 35, 30);
+        B.setBounds(155, 230, 35, 30);
+        O.setBounds(190, 230, 35, 30);
+        AB.setBounds(225, 230, 45, 30);
+        mainPanel.add(A);
+        mainPanel.add(B);
+        mainPanel.add(O);
+        mainPanel.add(AB);
 
         JLabel cautionLabel = new JLabel("주의사항");
         cautionLabel.setBounds(20, 280, 80, 30);
@@ -497,11 +522,11 @@ class PatientAddWindow extends JFrame implements ActionListener{
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        String query = "INSERT INTO patient(name, tel1, identitynumber, caution, address, bloodType, gender, height, weight) " +
+        String query = "INSERT INTO patient(name, phone, identitynumber, caution, address, bloodType, gender, height, weight) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
         try {
             PreparedStatement pstm = conn.prepareStatement(query);
-            if (nameField.getText().isEmpty() || idField1.getText().isEmpty() || genderField.getText().isEmpty()) {
+            if (nameField.getText().isEmpty() || idField1.getText().isEmpty()) {
                 JOptionPane.showMessageDialog(null, "필수 사항은 입력하셔야 합니다.");
             } else {
                 pstm.setString(1, nameField.getText());
@@ -509,20 +534,32 @@ class PatientAddWindow extends JFrame implements ActionListener{
                 pstm.setString(3, idField1.getText() + "-" + idField2.getText());
                 pstm.setString(4, cautionArea.getText());
                 pstm.setString(5, addressField.getText());
-                pstm.setString(6, bloodTypeField.getText());
-                pstm.setString(7, genderField.getText());
-                pstm.setInt(8, Integer.parseInt(heightField.getText()));
-                pstm.setInt(9, Integer.parseInt(weightField.getText()));
+                if (A.isSelected()) {
+                    pstm.setString(6, "A");
+                } else if (B.isSelected()) {
+                    pstm.setString(6, "B");
+                } else if (O.isSelected()) {
+                    pstm.setString(6, "O");
+                } else if (AB.isSelected()) {
+                    pstm.setString(6, "AB");
+                } else {
+                    pstm.setString(6, "");
+                }
+                pstm.setString(7, male.isSelected() ? "남" : "여");
+                pstm.setInt(8, heightField.getText().isEmpty() ? 0 : Integer.parseInt(heightField.getText().trim()));
+                pstm.setInt(9, weightField.getText().isEmpty() ? 0 : Integer.parseInt(weightField.getText().trim()));
 
                 if (pstm.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(null, "삽입 성공");
+                    JOptionPane.showMessageDialog(null, "추가 성공");
                 } else {
-                    JOptionPane.showMessageDialog(null, "실패");
+                    JOptionPane.showMessageDialog(null, "추가 실패");
                 }
             }
 
         } catch (SQLException ex) {
-            System.out.println("오류");
+            ex.printStackTrace();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(null, "키와 몸무게는 숫자를 입력해주세요");
         }
     }
 }
