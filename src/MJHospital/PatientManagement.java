@@ -47,7 +47,10 @@ class PatientConditionPanel extends JPanel implements ActionListener {
     Connection conn;
     Statement st;
     PatientListPanel patientListPanel;
-    JTextField nameField, idField, genderField, phoneField, bloodTypeField, addressField, heightField, weightField;
+    JTextField nameField, idField, phoneField, addressField, heightField, weightField;
+    JRadioButton allGender, male, female;
+    JComboBox<String> bloodTypeBox;
+
     public PatientConditionPanel(PatientListPanel patientListPanel, Connection conn, Statement st) {
         this.patientListPanel = patientListPanel;
         this.conn = conn;
@@ -58,82 +61,100 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         setPreferredSize(new Dimension(1000, 150));
         int xValue = 250;
         int yValue = 20;
+        int labelWidth = 60;
+        int fieldWidth = 130;
+        int height = 30;
+        int spacing = 40;
 
         // Create labels and text fields
         JLabel nameLabel = new JLabel("이름:");
-        nameLabel.setBounds(xValue, yValue, 60, 30);
+        nameLabel.setBounds(xValue, yValue, labelWidth, height);
         add(nameLabel);
 
         nameField = new JTextField();
-        nameField.setBounds(xValue + 60, yValue, 120, 30);
+        nameField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(nameField);
 
         JLabel idLabel = new JLabel("주민번호:");
-        idLabel.setBounds(xValue, yValue + 40, 60, 30);
+        idLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(idLabel);
 
         idField = new JTextField();
-        idField.setBounds(xValue + 60, yValue + 40, 120, 30);
+        idField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         add(idField);
 
         JLabel genderLabel = new JLabel("성별:");
-        genderLabel.setBounds(xValue, yValue + 80, 60, 30);
+        genderLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         add(genderLabel);
 
-        genderField = new JTextField();
-        genderField.setBounds(xValue + 60, yValue + 80, 120, 30);
-        add(genderField);
+        ButtonGroup genderGroup = new ButtonGroup();
+        allGender  = new JRadioButton("전체");
+        allGender.setSelected(true);
+        male = new JRadioButton("남");
+        female = new JRadioButton("여");
+
+        genderGroup.add(allGender);
+        genderGroup.add(male);
+        genderGroup.add(female);
+
+        allGender.setBounds(xValue + 60, yValue + 2 * spacing, 50, height);
+        male.setBounds(xValue + 110, yValue + 2 * spacing, 40, height);
+        female.setBounds(xValue + 150, yValue + 2 * spacing, 40, height);
+        add(allGender);
+        add(male);
+        add(female);
 
         xValue += 220;
 
         JLabel phoneLabel = new JLabel("전화번호:");
-        phoneLabel.setBounds(xValue, yValue, 60, 30);
+        phoneLabel.setBounds(xValue, yValue, labelWidth, height);
         add(phoneLabel);
 
         phoneField = new JTextField();
-        phoneField.setBounds(xValue + 60, yValue, 120, 30);
+        phoneField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(phoneField);
 
         JLabel bloodTypeLabel = new JLabel("혈액형:");
-        bloodTypeLabel.setBounds(xValue, yValue + 40, 60, 30);
+        bloodTypeLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(bloodTypeLabel);
 
-        bloodTypeField = new JTextField();
-        bloodTypeField.setBounds(xValue + 60, yValue + 40, 120, 30);
-        add(bloodTypeField);
+        String[] bloodTypeList = {"전체", "A", "B", "O", "AB"};
+        bloodTypeBox = new JComboBox<>(bloodTypeList);
+        bloodTypeBox.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
+        add(bloodTypeBox);
 
         JLabel addressLabel = new JLabel("주소:");
-        addressLabel.setBounds(xValue, yValue + 80, 60, 30);
+        addressLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         add(addressLabel);
 
         addressField = new JTextField();
-        addressField.setBounds(xValue + 60, yValue + 80, 120, 30);
+        addressField.setBounds(xValue + labelWidth, yValue + 2 * spacing, fieldWidth, height);
         add(addressField);
 
         xValue += 220;
 
         JLabel heightLabel = new JLabel("키:");
-        heightLabel.setBounds(xValue, yValue, 60, 30);
+        heightLabel.setBounds(xValue, yValue, labelWidth, height);
         add(heightLabel);
 
         heightField = new JTextField();
-        heightField.setBounds(xValue + 60, yValue, 120, 30);
+        heightField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(heightField);
 
         JLabel weightLabel = new JLabel("몸무게:");
-        weightLabel.setBounds(xValue, yValue + 40, 60, 30);
+        weightLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(weightLabel);
 
         weightField = new JTextField();
-        weightField.setBounds(xValue + 60, yValue + 40, 120, 30);
+        weightField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         add(weightField);
 
         JButton addButton = new JButton("추가");
-        addButton.setBounds(xValue, yValue + 80, 180, 30);
+        addButton.setBounds(xValue, yValue + 2 * spacing, 190, height);
         add(addButton);
 
         JButton searchButton = new JButton("검색");
-        searchButton.setBounds(xValue + 200, yValue, 80, 110);
+        searchButton.setBounds(xValue + 220, yValue, 80, 110);
         add(searchButton);
 
         // Add ActionListener to the buttons
@@ -146,9 +167,8 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         if (e.getActionCommand().equals("검색")) {
             String name = nameField.getText();
             String id = idField.getText();
-            String gender = genderField.getText();
             String phone = phoneField.getText();
-            String bloodType = bloodTypeField.getText();
+            String bloodType = bloodTypeBox.getSelectedItem().toString();
             String address = addressField.getText();
             String height = heightField.getText();
             String weight = weightField.getText();
@@ -157,9 +177,10 @@ class PatientConditionPanel extends JPanel implements ActionListener {
 
             if (!name.isEmpty()) query += " AND name LIKE '%" + name + "%'";
             if (!id.isEmpty()) query += " AND identitynumber LIKE '%" + id + "%'";
-            if (!gender.isEmpty()) query += " AND gender LIKE '%" + gender + "%'";
+            if (male.isSelected()) query += " AND gender = '남'";
+            if (female.isSelected()) query +=" AND gender = '여'";
             if (!phone.isEmpty()) query += " AND phone LIKE '%" + phone + "%'";
-            if (!bloodType.isEmpty()) query += " AND bloodType LIKE '%" + bloodType + "%'";
+            if (!bloodType.equals("전체")) query += " AND bloodType LIKE '%" + bloodType + "%'";
             if (!address.isEmpty()) query += " AND address LIKE '%" + address + "%'";
             if (!height.isEmpty()) query += " AND height LIKE '%" + height + "%'";
             if (!weight.isEmpty()) query += " AND weight LIKE '%" + weight + "%'";
@@ -249,10 +270,12 @@ class PatientListPanel extends JPanel implements MouseListener {
     }
 }
 
-class PatientDetailsPanel extends JPanel {
+class PatientDetailsPanel extends JPanel implements ActionListener {
     JTextField nameField, idField, genderField, bloodTypeField, phoneField, heightField, weightField, addressField;
     JTextArea cautionArea;
+    JRadioButton A, B, O, AB;
     PatientListPanel patientListPanel;
+    int patientId;
     Connection conn;
     Statement st;
 
@@ -260,98 +283,123 @@ class PatientDetailsPanel extends JPanel {
         this.conn = conn;
         this.st = st;
 
-        setLayout(new GridBagLayout());
-        setBorder(BorderFactory.createTitledBorder("환자 상세 정보"));
+        // 기본 x, y 좌표
+        int xValue = 300;
+        int yValue = 60;
+        int labelWidth = 60;
+        int fieldWidth = 130;
+        int height = 30;
+        int spacing = 60;
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(20, 20, 20, 20);
+// null 레이아웃 설정
+        setLayout(null);
+        setBorder(BorderFactory.createTitledBorder("환자 정보"));
 
-        // 왼쪽 열 - 레이블 및 텍스트 필드
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        add(new JLabel("이름:"), gbc);
+// 왼쪽 열 - 레이블 및 텍스트 필드
+        JLabel nameLabel = new JLabel("이름:");
+        nameLabel.setBounds(xValue, yValue, labelWidth, height);
+        add(nameLabel);
 
-        gbc.gridy++;
-        add(new JLabel("주민번호:"), gbc);
-
-        gbc.gridy++;
-        add(new JLabel("성별:"), gbc);
-
-        gbc.gridy++;
-        add(new JLabel("혈액형:"), gbc);
-
-        gbc.gridy++;
-        add(new JLabel("주의사항:"), gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        nameField = new JTextField(15);
+        nameField = new JTextField();
+        nameField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         nameField.setEditable(false);
-        add(nameField, gbc);
+        add(nameField);
 
-        gbc.gridy++;
-        idField = new JTextField(15);
+        JLabel idLabel = new JLabel("주민번호:");
+        idLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
+        add(idLabel);
+
+        idField = new JTextField();
+        idField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         idField.setEditable(false);
-        add(idField, gbc);
+        add(idField);
 
-        gbc.gridy++;
-        genderField = new JTextField(15);
+        JLabel genderLabel = new JLabel("성별:");
+        genderLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
+        add(genderLabel);
+
+        genderField = new JTextField();
+        genderField.setBounds(xValue + labelWidth, yValue + 2 * spacing, fieldWidth, height);
         genderField.setEditable(false);
-        add(genderField, gbc);
+        add(genderField);
 
-        gbc.gridy++;
-        bloodTypeField = new JTextField(15);
-        bloodTypeField.setEditable(false);
-        add(bloodTypeField, gbc);
+        JLabel bloodTypeLabel = new JLabel("혈액형:");
+        bloodTypeLabel.setBounds(xValue, yValue + 3 * spacing, labelWidth, height);
+        add(bloodTypeLabel);
 
-        gbc.gridy++;
-        gbc.fill = GridBagConstraints.BOTH;
-        cautionArea = new JTextArea(3, 15);
-        add(new JScrollPane(cautionArea), gbc);
+        ButtonGroup bloodGroup = new ButtonGroup();
+        A = new JRadioButton("A");
+        B = new JRadioButton("B");
+        O = new JRadioButton("O");
+        AB = new JRadioButton("AB");
+        bloodGroup.add(A);
+        bloodGroup.add(B);
+        bloodGroup.add(O);
+        bloodGroup.add(AB);
 
-        // 오른쪽 열 - 레이블 및 텍스트 필드
-        gbc.gridx = 2;
-        gbc.gridy = 0;
-        gbc.fill = GridBagConstraints.NONE;
-        add(new JLabel("연락처:"), gbc);
+        A.setBounds(xValue + labelWidth, yValue + 3 * spacing, 35, 30);
+        B.setBounds(xValue + labelWidth + 35, yValue + 3 * spacing, 35, 30);
+        O.setBounds(xValue + labelWidth + 70, yValue + 3 * spacing, 35, 30);
+        AB.setBounds(xValue + labelWidth + 105, yValue + 3 * spacing, 45, 30);
+        add(A);
+        add(B);
+        add(O);
+        add(AB);
 
-        gbc.gridy++;
-        add(new JLabel("키:"), gbc);
+        JLabel cautionLabel = new JLabel("주의사항:");
+        cautionLabel.setBounds(xValue, yValue + 4 * spacing, labelWidth, height);
+        add(cautionLabel);
 
-        gbc.gridy++;
-        add(new JLabel("몸무게:"), gbc);
+        cautionArea = new JTextArea(15, 15);
+        cautionArea.setBounds(xValue + labelWidth, yValue + 4 * spacing, fieldWidth, 3 * height);
+        add(cautionArea);
 
-        gbc.gridy++;
-        add(new JLabel("주소:"), gbc);
+// 오른쪽 열 - 레이블 및 텍스트 필드
+        xValue += labelWidth + fieldWidth + 60; // 오른쪽 열로 이동
 
-        gbc.gridy++;
-        gbc.gridwidth = 2;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        add(new JButton("수정"), gbc);
+        JLabel phoneLabel = new JLabel("연락처:");
+        phoneLabel.setBounds(xValue, yValue, labelWidth, height);
+        add(phoneLabel);
 
-        gbc.gridx = 3;
-        gbc.gridy = 0;
-        phoneField = new JTextField(15);
-        add(phoneField, gbc);
+        phoneField = new JTextField();
+        phoneField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
+        add(phoneField);
 
-        gbc.gridy++;
-        heightField = new JTextField(15);
-        add(heightField, gbc);
+        JLabel heightLabel = new JLabel("키:");
+        heightLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
+        add(heightLabel);
 
-        gbc.gridy++;
-        weightField = new JTextField(15);
-        add(weightField, gbc);
+        heightField = new JTextField();
+        heightField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
+        add(heightField);
 
-        gbc.gridy++;
-        addressField = new JTextField(15);
-        add(addressField, gbc);
+        JLabel weightLabel = new JLabel("몸무게:");
+        weightLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
+        add(weightLabel);
+
+        weightField = new JTextField();
+        weightField.setBounds(xValue + labelWidth, yValue + 2 * spacing, fieldWidth, height);
+        add(weightField);
+
+        JLabel addressLabel = new JLabel("주소:");
+        addressLabel.setBounds(xValue, yValue + 3 * spacing, labelWidth, height);
+        add(addressLabel);
+
+        addressField = new JTextField();
+        addressField.setBounds(xValue + labelWidth, yValue + 3 * spacing, fieldWidth, height);
+        add(addressField);
+
+        JButton modifyButton = new JButton("수정");
+        modifyButton.addActionListener(this);
+        modifyButton.setBounds(xValue, yValue + 4 * spacing, labelWidth + fieldWidth, height);
+        add(modifyButton);
     }
 
     public void setData(String id) {
         String query = "SELECT * FROM patient WHERE identitynumber = '" + id + "'";
         try(ResultSet rs = st.executeQuery(query)) {
             rs.next();
+            patientId = rs.getInt("patientid");
             nameField.setText(rs.getString("name"));
             idField.setText(rs.getString("identitynumber"));
             genderField.setText(rs.getString("gender"));
@@ -368,6 +416,32 @@ class PatientDetailsPanel extends JPanel {
 
     public void setPatientListPanel(PatientListPanel patientListPanel) {
         this.patientListPanel = patientListPanel;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getActionCommand().equals("수정")) {
+            String query = "UPDATE patient SET phone = ?, gender = ?, bloodtype = ?, caution = ?, address = ?, height = ?, weight = ? WHERE patientid = ? ";
+            try {
+                PreparedStatement pstm = conn.prepareStatement(query);
+                pstm.setString(1, phoneField.getText());
+                pstm.setString(2, genderField.getText());
+                pstm.setString(3, bloodTypeField.getText());
+                pstm.setString(4, cautionArea.getText());
+                pstm.setString(5, addressField.getText());
+                pstm.setInt(6, Integer.parseInt(heightField.getText()));
+                pstm.setInt(7, Integer.parseInt(weightField.getText()));
+                pstm.setInt(8, patientId);
+
+                if (pstm.executeUpdate() > 0) {
+                    JOptionPane.showMessageDialog(null, "수정 성공");
+                } else {
+                    JOptionPane.showMessageDialog(null, "수정 실패");
+                }
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
     }
 }
 
@@ -399,7 +473,7 @@ class PatientAddWindow extends JFrame implements ActionListener{
         mainPanel.setLayout(null);
 
         int xValue = 20;
-        int yValue = 20;
+        int yValue = 40;
         // Left column components
         JLabel nameLabel = new JLabel("*이름");
         nameLabel.setBounds(xValue, yValue, 80, 30);
@@ -414,19 +488,19 @@ class PatientAddWindow extends JFrame implements ActionListener{
         mainPanel.add(idLabel);
 
         idField1 = new JTextField(6);
-        idField1.setBounds(120, 130, 70, 30);
+        idField1.setBounds(xValue + 100, yValue + 50, 70, 30);
         mainPanel.add(idField1);
 
         JLabel bar = new JLabel("-");
-        bar.setBounds(193, 130, 4, 30);
+        bar.setBounds(xValue + 173, yValue + 50, 4, 30);
         mainPanel.add(bar);
 
         idField2 = new JTextField(7);
-        idField2.setBounds(200, 130, 70, 30);
+        idField2.setBounds(xValue + 180, yValue + 50, 70, 30);
         mainPanel.add(idField2);
 
         JLabel genderLabel = new JLabel("*성별");
-        genderLabel.setBounds(20, 180, 80, 30);
+        genderLabel.setBounds(xValue, yValue + 100, 80, 30);
         mainPanel.add(genderLabel);
 
         ButtonGroup genderGroup = new ButtonGroup();
@@ -437,13 +511,13 @@ class PatientAddWindow extends JFrame implements ActionListener{
         genderGroup.add(male);
         genderGroup.add(female);
 
-        male.setBounds(120, 180, 70, 30);
-        female.setBounds(200, 180, 70, 30);
+        male.setBounds(xValue + 100, yValue + 100, 70, 30);
+        female.setBounds(xValue + 180, yValue + 100, 70, 30);
         mainPanel.add(male);
         mainPanel.add(female);
 
         JLabel bloodTypeLabel = new JLabel("혈액형");
-        bloodTypeLabel.setBounds(20, 230, 80, 30);
+        bloodTypeLabel.setBounds(xValue, yValue + 150, 80, 30);
         mainPanel.add(bloodTypeLabel);
 
         ButtonGroup bloodGroup = new ButtonGroup();
@@ -456,59 +530,60 @@ class PatientAddWindow extends JFrame implements ActionListener{
         bloodGroup.add(O);
         bloodGroup.add(AB);
 
-        A.setBounds(120, 230, 35, 30);
-        B.setBounds(155, 230, 35, 30);
-        O.setBounds(190, 230, 35, 30);
-        AB.setBounds(225, 230, 45, 30);
+        A.setBounds(xValue + 100, yValue + 150, 35, 30);
+        B.setBounds(xValue + 135, yValue + 150, 35, 30);
+        O.setBounds(xValue + 170, yValue + 150, 35, 30);
+        AB.setBounds(xValue + 205, yValue + 150, 45, 30);
         mainPanel.add(A);
         mainPanel.add(B);
         mainPanel.add(O);
         mainPanel.add(AB);
 
         JLabel cautionLabel = new JLabel("주의사항");
-        cautionLabel.setBounds(20, 280, 80, 30);
+        cautionLabel.setBounds(xValue, yValue + 200, 80, 30);
         mainPanel.add(cautionLabel);
 
-        cautionArea = new JTextArea(15, 20);
-        cautionArea.setBounds(120, 280, 150, 100);
+        cautionArea = new JTextArea(15, 13);
+        cautionArea.setBounds(xValue + 100, yValue + 200, 150, 100);
         mainPanel.add(cautionArea);
 
+        xValue += 300;
         // Right column components
         JLabel phoneLabel = new JLabel("연락처");
-        phoneLabel.setBounds(320, 80, 80, 30);
+        phoneLabel.setBounds(xValue, yValue, 80, 30);
         mainPanel.add(phoneLabel);
 
         phoneField = new JTextField();
-        phoneField.setBounds(420, 80, 150, 30);
+        phoneField.setBounds(xValue + 100, yValue, 150, 30);
         mainPanel.add(phoneField);
 
         JLabel heightLabel = new JLabel("키");
-        heightLabel.setBounds(320, 130, 80, 30);
+        heightLabel.setBounds(xValue, yValue + 50, 80, 30);
         mainPanel.add(heightLabel);
 
         heightField = new JTextField();
-        heightField.setBounds(420, 130, 150, 30);
+        heightField.setBounds(xValue + 100, yValue + 50, 150, 30);
         mainPanel.add(heightField);
 
         JLabel weightLabel = new JLabel("몸무게");
-        weightLabel.setBounds(320, 180, 80, 30);
+        weightLabel.setBounds(xValue, yValue + 100, 80, 30);
         mainPanel.add(weightLabel);
 
         weightField = new JTextField();
-        weightField.setBounds(420, 180, 150, 30);
+        weightField.setBounds(xValue + 100, yValue + 100, 150, 30);
         mainPanel.add(weightField);
 
         JLabel addressLabel = new JLabel("주소");
-        addressLabel.setBounds(320, 230, 80, 30);
+        addressLabel.setBounds(xValue, yValue + 150, 80, 30);
         mainPanel.add(addressLabel);
 
         addressField = new JTextField();
-        addressField.setBounds(420, 230, 150, 30);
+        addressField.setBounds(xValue + 100, yValue + 150, 150, 30);
         mainPanel.add(addressField);
 
         JButton addButton = new JButton("추가");
         addButton.addActionListener(this);
-        addButton.setBounds(320, 280, 150, 30);
+        addButton.setBounds(xValue, yValue + 200, 250, 30);
         mainPanel.add(addButton);
 
         add(mainPanel, BorderLayout.CENTER);
@@ -537,14 +612,15 @@ class PatientAddWindow extends JFrame implements ActionListener{
                 } else if (AB.isSelected()) {
                     pstm.setString(6, "AB");
                 } else {
-                    pstm.setString(6, "");
+                    pstm.setString(6, null);
                 }
                 pstm.setString(7, male.isSelected() ? "남" : "여");
-                pstm.setInt(8, heightField.getText().isEmpty() ? 0 : Integer.parseInt(heightField.getText().trim()));
-                pstm.setInt(9, weightField.getText().isEmpty() ? 0 : Integer.parseInt(weightField.getText().trim()));
+                pstm.setInt(8, heightField.getText().isEmpty() ? null : Integer.parseInt(heightField.getText().trim()));
+                pstm.setInt(9, weightField.getText().isEmpty() ? null : Integer.parseInt(weightField.getText().trim()));
 
                 if (pstm.executeUpdate() > 0) {
                     JOptionPane.showMessageDialog(null, "추가 성공");
+                    dispose();
                 } else {
                     JOptionPane.showMessageDialog(null, "추가 실패");
                 }
