@@ -10,6 +10,7 @@ class HospitalUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 720); // 필요한 크기로 설정
         setResizable(false);
+        setLocationRelativeTo(null);
 
         // 상단 패널 생성
         JPanel topPanel = new JPanel();
