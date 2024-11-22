@@ -160,13 +160,21 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         add(searchButton);
 
         // Add ActionListener to the buttons
+        nameField.addActionListener(this);
+        idField.addActionListener(this);
+        phoneField.addActionListener(this);
+        addressField.addActionListener(this);
+        heightField.addActionListener(this);
+        weightField.addActionListener(this);
         addButton.addActionListener(this);
         searchButton.addActionListener(this);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getActionCommand().equals("검색")) {
+        if (e.getActionCommand().equals("추가")) {
+            new PatientAddWindow(conn).setVisible(true);
+        } else {
             String name = nameField.getText();
             String id = idField.getText();
             String phone = phoneField.getText();
@@ -187,7 +195,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
             if (!height.isEmpty()) query += " AND height = " + height;
             if (!weight.isEmpty()) query += " AND weight = " + weight;
 
-            query += " order by name ";
+            query += " ORDER BY name";
 
             try (ResultSet rs = st.executeQuery(query)) {
                 Vector<Vector<String>> dataVector = new Vector<>();
@@ -204,8 +212,6 @@ class PatientConditionPanel extends JPanel implements ActionListener {
                 JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
                 ex.printStackTrace();
             }
-        } else if (e.getActionCommand().equals("추가")) {
-            new PatientAddWindow(conn).setVisible(true);
         }
     }
 }
@@ -627,7 +633,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         if (JOptionPane.showConfirmDialog(this, nameField.getText() + " 환자를 추가하시겠습니까?") == 0) {
             String query = "INSERT INTO patient(name, phone, identitynumber, caution, address, bloodType, gender, height, weight) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try {
                 PreparedStatement pstm = conn.prepareStatement(query);
                 if (nameField.getText().isEmpty()) {
@@ -664,6 +670,8 @@ class PatientAddWindow extends JFrame implements ActionListener {
                         JOptionPane.showMessageDialog(this, "추가 실패");
                     }
                 }
+            } catch (SQLIntegrityConstraintViolationException ex) {
+                JOptionPane.showMessageDialog(this, "이미 추가된 환자입니다");
             } catch (SQLException ex) {
                 ex.printStackTrace();
             } catch (NumberFormatException ex) {
