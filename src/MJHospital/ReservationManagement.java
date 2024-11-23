@@ -8,6 +8,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Vector;
 
 public class ReservationManagement extends JPanel {
@@ -52,11 +54,12 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
     JTextField patientField, idField, phoneField, doctorField;
     JComboBox<Integer> year, year2, month, month2, day, day2;
 
+
     public ReservationConditionPanel(ReservationListPanel reservationListPanel, Connection conn, Statement st) {
         this.reservationListPanel = reservationListPanel;
         this.conn = conn;
         this.st = st;
-
+        LocalDate now = LocalDate.now();
         setLayout(null);
         setBorder(BorderFactory.createTitledBorder("예약 조건"));
         setPreferredSize(new Dimension(1000, 150));
@@ -105,7 +108,7 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         xValue += labelWidth + fieldWidth + spacing;
 
         Integer[] years = new Integer[100];
-        int currentYear = 2024; // 현재 년도
+        int currentYear = now.getYear(); // 현재 년도
         for (int i = 0; i < 100; i++) {
             years[i] = currentYear - 50 + i;
         }
@@ -123,6 +126,13 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         year2 = new JComboBox<>(years);
         month2 = new JComboBox<>(months);
         day2 = new JComboBox<>(days);
+
+        year.setSelectedItem(currentYear);
+        year2.setSelectedItem(currentYear);
+        month.setSelectedItem(now.getMonthValue());
+        month2.setSelectedItem(now.getMonthValue());
+        day.setSelectedItem(now.getDayOfMonth());
+        day2.setSelectedItem(now.getDayOfMonth());
         JLabel wave = new JLabel("~");
 
         year.setBounds(xValue, yValue, 60, height);
@@ -156,27 +166,58 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         doctorField.addActionListener(this);
         addButton.addActionListener(this);
         searchButton.addActionListener(this);
+        year.addActionListener(this);
+        month.addActionListener(this);
+        year2.addActionListener(this);
+        month2.addActionListener(this);
+
+        searchReservation();
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("추가")) {
             new ReservationAddWindow(conn).setVisible(true);
+        } else if (e.getSource() == year || e.getSource() == month) {
+            setDate(year, month, day);
+        } else if (e.getSource() == year2 || e.getSource() == month2) {
+            setDate(year2, month2, day2);
         } else {
-            String patientName = patientField.getText();
-            String id = idField.getText();
-            String phone = phoneField.getText();
-            String doctorName = doctorField.getText();
+            searchReservation();
+        }
+    }
 
+    public void setDate(JComboBox<Integer> year, JComboBox<Integer> month, JComboBox<Integer> day) {
+        LocalDate date = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), 1);
+        LocalDate afterDate = date.plusMonths(1);
+        Vector<Integer> days = new Vector<>();
+        while (date.isBefore(afterDate)) {
+            days.add(date.getDayOfMonth());
+            date = date.plusDays(1);
+        }
+        day.setModel(new DefaultComboBoxModel<>(days));
+    }
 
-            String query = "SELECT * FROM reservation JOIN patient ON reservation.patientid = patient.patientid JOIN staff ON reservation.staffid = staff.staffid WHERE 1=1";
+    public void searchReservation() {
+        String patientName = patientField.getText();
+        String id = idField.getText();
+        String phone = phoneField.getText();
+        String doctorName = doctorField.getText();
+        LocalDate startDay = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), Integer.parseInt(day.getSelectedItem().toString()));
+        LocalDate endDay = LocalDate.of(Integer.parseInt(year2.getSelectedItem().toString()), Integer.parseInt(month2.getSelectedItem().toString()), Integer.parseInt(day2.getSelectedItem().toString()));
+
+        if (startDay.isAfter(endDay)) {
+            JOptionPane.showMessageDialog(this, "검색하려는 날짜의 범위를 올바르게 지정해주세요");
+        } else {
+            String query = "SELECT * FROM reservation JOIN patient ON reservation.patientid = patient.patientid JOIN staff ON reservation.staffid = staff.staffid" +
+                    " WHERE reservationdate >= '" + startDay + "' and reservationdate <= '" + endDay + "'";
 
             if (!patientName.isEmpty()) query += " AND patient.name LIKE '%" + patientName + "%'";
             if (!id.isEmpty()) query += " AND patient.identitynumber LIKE '%" + id + "%'";
             if (!phone.isEmpty()) query += " AND patient.phone LIKE '%" + phone + "%'";
             if (!doctorName.isEmpty()) query += " AND staff.name LIKE '%" + doctorName + "%'";
 
-            query += " ORDER BY patient.name";
+            query += " ORDER BY reservationdate, reservationtime";
 
             try (ResultSet rs = st.executeQuery(query)) {
                 Vector<Vector<String>> dataVector = new Vector<>();
@@ -192,13 +233,16 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
                 reservationListPanel.setData(dataVector);
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
+                System.out.println(ex.getMessage());
                 ex.printStackTrace();
             }
         }
+
+
     }
 }
 
-class ReservationListPanel extends JPanel implements MouseListener {
+class ReservationListPanel extends JPanel implements MouseListener{
     JTable table;
     DefaultTableModel tableModel;
     ReservationDetailPanel reservationDetailPanel;
@@ -241,8 +285,8 @@ class ReservationListPanel extends JPanel implements MouseListener {
     @Override
     public void mouseClicked(MouseEvent e) {
         int row = table.getSelectedRow();
-        String date = (String) tableModel.getValueAt(row, 0);
-        String time = (String) tableModel.getValueAt(row, 1);
+        LocalDate date = LocalDate.parse(tableModel.getValueAt(row, 0).toString());
+        LocalTime time = LocalTime.parse(tableModel.getValueAt(row, 1).toString());
         reservationDetailPanel.setData(date, time);
     }
 
@@ -270,6 +314,7 @@ class ReservationListPanel extends JPanel implements MouseListener {
 class ReservationDetailPanel extends JPanel implements ActionListener {
     JTextField patientField, patientIdField, phoneField, doctorField, dateField, timeField;
     JTextArea cautionArea;
+    JComboBox<Integer> year, month, day, hour, minute;
     int reservationId;
     Connection conn;
     Statement st;
@@ -333,17 +378,54 @@ class ReservationDetailPanel extends JPanel implements ActionListener {
         dateLabel.setBounds(xValue, yValue, labelWidth, height);
         add(dateLabel);
 
-        dateField = new JTextField();
-        dateField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
-        add(dateField);
+        LocalDate now = LocalDate.now();
+
+        Integer[] years = new Integer[100];
+        int currentYear = now.getYear(); // 현재 년도
+        for (int i = 0; i < 100; i++) {
+            years[i] = currentYear - 50 + i;
+        }
+
+        Integer[] months = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+
+        Integer[] days = new Integer[31];
+        for (int i = 0; i < 31; i++) {
+            days[i] = i + 1;
+        }
+
+        year = new JComboBox<>(years);
+        month = new JComboBox<>(months);
+        day = new JComboBox<>(days);
+
+        year.setBounds(xValue + labelWidth, yValue, 60, height);
+        month.setBounds(xValue + labelWidth + 60, yValue, 40, height);
+        day.setBounds(xValue + labelWidth + 100, yValue, 40, height);
+
+        add(year);
+        add(month);
+        add(day);
 
         JLabel timeLabel = new JLabel("시간");
         timeLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(timeLabel);
 
-        timeField = new JTextField();
-        timeField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
-        add(timeField);
+        Integer[] hours = new Integer[10];
+        for (int i = 0; i < hours.length; i++) {
+            hours[i] = i + 9;
+        }
+
+        Integer[] minutes = new Integer[6];
+        for (int i = 0; i < 6; i++) {
+            minutes[i] = i * 10;
+        }
+
+        hour = new JComboBox<>(hours);
+        minute = new JComboBox<>(minutes);
+        hour.setBounds(xValue + labelWidth, yValue + spacing, 50, height);
+        minute.setBounds(xValue + labelWidth + 50, yValue + spacing, 50, height);
+
+        add(hour);
+        add(minute);
 
         JLabel cautionLabel = new JLabel("내원 목적");
         cautionLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
@@ -354,17 +436,20 @@ class ReservationDetailPanel extends JPanel implements ActionListener {
         add(cautionArea);
 
         JButton modifyButton = new JButton("수정");
-        modifyButton.addActionListener(this);
         modifyButton.setBounds(xValue, yValue + 3 * spacing, 120, height);
         add(modifyButton);
 
         JButton deleteButton = new JButton("삭제");
-        deleteButton.addActionListener(this);
         deleteButton.setBounds(xValue + 140, yValue + 3 * spacing, 120, height);
         add(deleteButton);
+
+        modifyButton.addActionListener(this);
+        deleteButton.addActionListener(this);
+        year.addActionListener(this);
+        month.addActionListener(this);
     }
 
-    public void setData(String date, String time) {
+    public void setData(LocalDate date, LocalTime time){
         String query = "SELECT * FROM reservation JOIN patient ON reservation.patientid = patient.patientid JOIN staff ON reservation.staffid = staff.staffid" +
                 " WHERE reservationdate = '" + date + "' AND reservationtime = '" + time + "'";
         try (ResultSet rs = st.executeQuery(query)) {
@@ -372,10 +457,14 @@ class ReservationDetailPanel extends JPanel implements ActionListener {
             reservationId = rs.getInt("reservationid");
             patientField.setText(rs.getString("patient.name"));
             patientIdField.setText(rs.getString("patient.identitynumber"));
+            doctorField.setText(rs.getString("staff.name"));
             cautionArea.setText(rs.getString("note"));
             phoneField.setText(rs.getString("patient.phone"));
-            dateField.setText(rs.getString("reservationdate"));
-            timeField.setText(rs.getString("reservationtime"));
+            year.setSelectedItem(date.getYear());
+            month.setSelectedItem(date.getMonthValue());
+            day.setSelectedItem(date.getDayOfMonth());
+            hour.setSelectedItem(time.getHour());
+            minute.setSelectedItem(time.getMinute());
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
             e.printStackTrace();
@@ -388,57 +477,67 @@ class ReservationDetailPanel extends JPanel implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        //수정 버튼 클릭 시
-        if (e.getActionCommand().equals("수정")) {
-            if (JOptionPane.showConfirmDialog(this, "수정하시겠습니까?") == 0) {
-                String query = "UPDATE reservation SET reservationdate = ?, reservationtime = ?, phone = ?, note = ? WHERE reservationid = ?";
-                try {
-                    PreparedStatement pstm = conn.prepareStatement(query);
-                    pstm.setString(1, dateField.getText().isEmpty() ? null : dateField.getText());
-                    pstm.setString(2, timeField.getText().isEmpty() ? null : timeField.getText());
-                    pstm.setString(3, phoneField.getText().isEmpty() ? null : phoneField.getText());
-                    pstm.setString(4, cautionArea.getText().isEmpty() ? null : cautionArea.getText());
-                    pstm.setInt(5, reservationId);
-                    if (pstm.executeUpdate() > 0) {
-                        JOptionPane.showMessageDialog(this, "수정 성공");
-                    } else {
-                        JOptionPane.showMessageDialog(this, "수정 실패");
-                    }
-                } catch (SQLException ex) {
-                    JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-                    ex.printStackTrace();
-                }
+        try {
+            if (e.getActionCommand().equals("수정")) modifyReservation();
+            else if (e.getActionCommand().equals("삭제")) deleteReservation();
+            else if (e.getSource() == year || e.getSource() == month) setDate(year, month, day);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
+            ex.printStackTrace();
+        }
+    }
+
+    private void setDate(JComboBox<Integer> year, JComboBox<Integer> month, JComboBox<Integer> day) {
+        LocalDate date = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), 1);
+        LocalDate afterDate = date.plusMonths(1);
+        Vector<Integer> days = new Vector<>();
+        while (date.isBefore(afterDate)) {
+            days.add(date.getDayOfMonth());
+            date = date.plusDays(1);
+        }
+        day.setModel(new DefaultComboBoxModel<>(days));
+    }
+
+    public void modifyReservation() throws SQLException {
+        if (JOptionPane.showConfirmDialog(this, "수정하시겠습니까?") == 0) {
+            String query = "UPDATE reservation SET reservationdate = ?, reservationtime = ?, phone = ?, note = ? WHERE reservationid = ?";
+            PreparedStatement pstm = conn.prepareStatement(query);
+            pstm.setString(1, dateField.getText().isEmpty() ? null : dateField.getText());
+            pstm.setString(2, timeField.getText().isEmpty() ? null : timeField.getText());
+            pstm.setString(3, phoneField.getText().isEmpty() ? null : phoneField.getText());
+            pstm.setString(4, cautionArea.getText().isEmpty() ? null : cautionArea.getText());
+            pstm.setInt(5, reservationId);
+            if (pstm.executeUpdate() > 0) {
+                JOptionPane.showMessageDialog(this, "수정 성공");
+            } else {
+                JOptionPane.showMessageDialog(this, "수정 실패");
             }
-        } else if (e.getActionCommand().equals("삭제")) {
-            if (JOptionPane.showConfirmDialog(null, patientField.getText() + " 예약을 정말 취소하시겠습니까?") == 0) {
-                String query = "DELETE FROM reservation WHERE reservationid = ?";
-                try {
-                    PreparedStatement pstm = conn.prepareStatement(query);
-                    pstm.setInt(1, reservationId);
-                    if (pstm.executeUpdate() > 0) {
-                        JOptionPane.showMessageDialog(this, "예약 취소");
-                    } else {
-                        JOptionPane.showMessageDialog(this, "예약 취소 실패");
-                    }
-                } catch (SQLException ex) {
-                    JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-                    ex.printStackTrace();
-                }
+        }
+    }
+
+    public void deleteReservation() throws SQLException {
+        if (JOptionPane.showConfirmDialog(null, patientField.getText() + " 예약을 정말 취소하시겠습니까?") == 0) {
+            String query = "DELETE FROM reservation WHERE reservationid = ?";
+            PreparedStatement pstm = conn.prepareStatement(query);
+            pstm.setInt(1, reservationId);
+            if (pstm.executeUpdate() > 0) {
+                JOptionPane.showMessageDialog(this, "예약 취소");
+            } else {
+                JOptionPane.showMessageDialog(this, "예약 취소 실패");
             }
         }
     }
 }
 
-class ReservationAddWindow extends JFrame implements ActionListener {
+class ReservationAddWindow extends JFrame implements ActionListener{
     Connection conn;
-    JTextField nameField, phoneField, idField1, idField2, heightField, weightField, addressField;
+    JTextField nameField, idField, doctorField;
     JTextArea cautionArea;
-    JRadioButton male, female, A, B, O, AB;
 
-    public ReservationAddWindow(Connection conn) {
+    public ReservationAddWindow(Connection conn){
         this.conn = conn;
 
-        setTitle("환자 추가");
+        setTitle("예약 추가");
         setSize(600, 500);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -447,7 +546,7 @@ class ReservationAddWindow extends JFrame implements ActionListener {
         titlePanel.setLayout(new BorderLayout());
         titlePanel.setBackground(Color.LIGHT_GRAY);
 
-        JLabel titleLabel = new JLabel("환자 추가");
+        JLabel titleLabel = new JLabel("예약 추가");
         titleLabel.setFont(new Font("Serif", Font.BOLD, 30));
         titlePanel.add(titleLabel, BorderLayout.NORTH);
 
@@ -459,8 +558,9 @@ class ReservationAddWindow extends JFrame implements ActionListener {
         int xValue = 20;
         int yValue = 40;
         int labelWidth = 100;
-        int fieldWidth = 150;
+        int fieldWidth = 200;
         int height = 30;
+        int spacing = 50;
 
         // Left column components
         JLabel nameLabel = new JLabel("*이름");
@@ -468,66 +568,34 @@ class ReservationAddWindow extends JFrame implements ActionListener {
         mainPanel.add(nameLabel);
 
         nameField = new JTextField(5);
-        nameField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
+        nameField.setBounds(xValue + labelWidth, yValue, fieldWidth - 50, height);
         mainPanel.add(nameField);
 
         JLabel idLabel = new JLabel("*주민번호");
-        idLabel.setBounds(xValue, yValue + 50, labelWidth, height);
+        idLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         mainPanel.add(idLabel);
 
-        idField1 = new JTextField(6);
-        idField1.setBounds(xValue + labelWidth, yValue + 50, 70, height);
-        mainPanel.add(idField1);
+        idField = new JTextField(6);
+        idField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
+        mainPanel.add(idField);
 
-        JLabel bar = new JLabel("-");
-        bar.setBounds(xValue + 173, yValue + 50, 4, height);
-        mainPanel.add(bar);
+        JLabel doctorLabel = new JLabel("담당의");
+        doctorLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
+        mainPanel.add(doctorLabel);
 
-        idField2 = new JTextField(7);
-        idField2.setBounds(xValue + 180, yValue + 50, 70, height);
-        mainPanel.add(idField2);
+        doctorField = new JTextField();
+        doctorField.setBounds(xValue + labelWidth, yValue + 2 * spacing, fieldWidth, height);
+        mainPanel.add(doctorField);
 
-        JLabel genderLabel = new JLabel("*성별");
-        genderLabel.setBounds(xValue, yValue + 100, labelWidth, height);
-        mainPanel.add(genderLabel);
+        JLabel dateLabel = new JLabel("날짜");
+        dateLabel.setBounds(xValue, yValue + 3 * spacing, labelWidth, height);
+        mainPanel.add(dateLabel);
 
-        ButtonGroup genderGroup = new ButtonGroup();
-        male = new JRadioButton("남");
-        male.setSelected(true);
-        female = new JRadioButton("여");
+        JLabel timeLabel = new JLabel("시간");
+        timeLabel.setBounds(xValue, yValue + 4 * spacing, labelWidth, height);
+        mainPanel.add(timeLabel);
 
-        genderGroup.add(male);
-        genderGroup.add(female);
-
-        male.setBounds(xValue + labelWidth, yValue + 100, 70, height);
-        female.setBounds(xValue + labelWidth + 80, yValue + 100, 70, height);
-        mainPanel.add(male);
-        mainPanel.add(female);
-
-        JLabel bloodTypeLabel = new JLabel("혈액형");
-        bloodTypeLabel.setBounds(xValue, yValue + 150, labelWidth, height);
-        mainPanel.add(bloodTypeLabel);
-
-        ButtonGroup bloodGroup = new ButtonGroup();
-        A = new JRadioButton("A");
-        B = new JRadioButton("B");
-        O = new JRadioButton("O");
-        AB = new JRadioButton("AB");
-        bloodGroup.add(A);
-        bloodGroup.add(B);
-        bloodGroup.add(O);
-        bloodGroup.add(AB);
-
-        A.setBounds(xValue + labelWidth, yValue + 150, 35, height);
-        B.setBounds(xValue + labelWidth + 35, yValue + 150, 35, height);
-        O.setBounds(xValue + labelWidth + 70, yValue + 150, 35, height);
-        AB.setBounds(xValue + labelWidth + 105, yValue + 150, 45, height);
-        mainPanel.add(A);
-        mainPanel.add(B);
-        mainPanel.add(O);
-        mainPanel.add(AB);
-
-        JLabel cautionLabel = new JLabel("주의사항");
+        JLabel cautionLabel = new JLabel("내원목적");
         cautionLabel.setBounds(xValue, yValue + 200, labelWidth, height);
         mainPanel.add(cautionLabel);
 
@@ -535,39 +603,7 @@ class ReservationAddWindow extends JFrame implements ActionListener {
         cautionArea.setBounds(xValue + labelWidth, yValue + 200, fieldWidth, height * 3);
         mainPanel.add(cautionArea);
 
-        xValue += 300;
-        // Right column components
-        JLabel phoneLabel = new JLabel("연락처");
-        phoneLabel.setBounds(xValue, yValue, labelWidth, height);
-        mainPanel.add(phoneLabel);
 
-        phoneField = new JTextField();
-        phoneField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
-        mainPanel.add(phoneField);
-
-        JLabel heightLabel = new JLabel("키");
-        heightLabel.setBounds(xValue, yValue + 50, labelWidth, height);
-        mainPanel.add(heightLabel);
-
-        heightField = new JTextField();
-        heightField.setBounds(xValue + labelWidth, yValue + 50, fieldWidth, height);
-        mainPanel.add(heightField);
-
-        JLabel weightLabel = new JLabel("몸무게");
-        weightLabel.setBounds(xValue, yValue + 100, labelWidth, height);
-        mainPanel.add(weightLabel);
-
-        weightField = new JTextField();
-        weightField.setBounds(xValue + labelWidth, yValue + 100, fieldWidth, height);
-        mainPanel.add(weightField);
-
-        JLabel addressLabel = new JLabel("주소");
-        addressLabel.setBounds(xValue, yValue + 150, labelWidth, height);
-        mainPanel.add(addressLabel);
-
-        addressField = new JTextField();
-        addressField.setBounds(xValue + labelWidth, yValue + 150, fieldWidth, height);
-        mainPanel.add(addressField);
 
         JButton addButton = new JButton("추가");
         addButton.addActionListener(this);
@@ -587,30 +623,10 @@ class ReservationAddWindow extends JFrame implements ActionListener {
                 if (nameField.getText().isEmpty()) {
                     JOptionPane.showMessageDialog(this, "이름을 입력하세요");
                     nameField.requestFocus();
-                } else if (idField1.getText().length() != 6 || idField2.getText().length() != 7) {
-                    JOptionPane.showMessageDialog(this, "올바른 주민번호를 입력해주세요");
-                    idField1.requestFocus();
                 } else {
                     pstm.setString(1, nameField.getText());
-                    pstm.setString(2, phoneField.getText().isEmpty() ? null : phoneField.getText());
-                    pstm.setString(3, idField1.getText() + "-" + idField2.getText());
                     pstm.setString(4, cautionArea.getText().isEmpty() ? null : cautionArea.getText());
-                    pstm.setString(5, addressField.getText().isEmpty() ? null : addressField.getText());
-                    if (A.isSelected()) {
-                        pstm.setString(6, "A");
-                    } else if (B.isSelected()) {
-                        pstm.setString(6, "B");
-                    } else if (O.isSelected()) {
-                        pstm.setString(6, "O");
-                    } else if (AB.isSelected()) {
-                        pstm.setString(6, "AB");
-                    } else {
-                        pstm.setString(6, null);
-                    }
-                    pstm.setString(7, male.isSelected() ? "남" : "여");
-                    pstm.setString(8, heightField.getText().isEmpty() ? null : heightField.getText());
-                    pstm.setString(9, weightField.getText().isEmpty() ? null : weightField.getText());
-
+                    pstm.setString(8, doctorField.getText().isEmpty() ? null : doctorField.getText());
                     if (pstm.executeUpdate() > 0) {
                         JOptionPane.showMessageDialog(this, "추가 성공");
                         dispose();
