@@ -30,6 +30,7 @@ class PatientManagement extends JPanel {
         patientConditionPanel = new PatientConditionPanel(patientListPanel, conn, st);
 
         patientDetailsPanel.setPatientListPanel(patientListPanel);
+        patientDetailsPanel.setPatientConditionPanel(patientConditionPanel);
 
         // 환자 조건 패널 생성
         add(patientConditionPanel, BorderLayout.NORTH);
@@ -66,8 +67,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         int height = 30;
         int spacing = 40;
 
-        // Create labels and text fields
-        JLabel nameLabel = new JLabel("이름:");
+        JLabel nameLabel = new JLabel("이름");
         nameLabel.setBounds(xValue, yValue, labelWidth, height);
         add(nameLabel);
 
@@ -75,15 +75,15 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         nameField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(nameField);
 
-        JLabel idLabel = new JLabel("주민번호:");
+        JLabel idLabel = new JLabel("주민번호");
         idLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(idLabel);
 
-        idField = new JTextField();
+        idField = new NumberTextField(13);
         idField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         add(idField);
 
-        JLabel genderLabel = new JLabel("성별:");
+        JLabel genderLabel = new JLabel("성별");
         genderLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         add(genderLabel);
 
@@ -106,15 +106,15 @@ class PatientConditionPanel extends JPanel implements ActionListener {
 
         xValue += labelWidth + fieldWidth + spacing;
 
-        JLabel phoneLabel = new JLabel("전화번호:");
+        JLabel phoneLabel = new JLabel("전화번호");
         phoneLabel.setBounds(xValue, yValue, labelWidth, height);
         add(phoneLabel);
 
-        phoneField = new JTextField();
+        phoneField = new NumberTextField(11);
         phoneField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(phoneField);
 
-        JLabel bloodTypeLabel = new JLabel("혈액형:");
+        JLabel bloodTypeLabel = new JLabel("혈액형");
         bloodTypeLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(bloodTypeLabel);
 
@@ -123,7 +123,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         bloodTypeBox.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         add(bloodTypeBox);
 
-        JLabel addressLabel = new JLabel("주소:");
+        JLabel addressLabel = new JLabel("주소");
         addressLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         add(addressLabel);
 
@@ -133,19 +133,19 @@ class PatientConditionPanel extends JPanel implements ActionListener {
 
         xValue += labelWidth + fieldWidth + spacing;
 
-        JLabel heightLabel = new JLabel("키:");
+        JLabel heightLabel = new JLabel("키");
         heightLabel.setBounds(xValue, yValue, labelWidth, height);
         add(heightLabel);
 
-        heightField = new JTextField();
+        heightField = new NumberTextField(3);
         heightField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(heightField);
 
-        JLabel weightLabel = new JLabel("몸무게:");
+        JLabel weightLabel = new JLabel("몸무게");
         weightLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(weightLabel);
 
-        weightField = new JTextField();
+        weightField = new NumberTextField(3);
         weightField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         add(weightField);
 
@@ -175,32 +175,26 @@ class PatientConditionPanel extends JPanel implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("추가")) {
-            new PatientAddWindow(conn).setVisible(true);
+            new PatientAddWindow(conn, this).setVisible(true);
         } else {
             searchPatient();
         }
     }
 
     public void searchPatient() {
-        String name = nameField.getText();
-        String id = idField.getText();
-        String phone = phoneField.getText();
-        String bloodType = bloodTypeBox.getSelectedItem().toString();
-        String address = addressField.getText();
-        String height = heightField.getText();
-        String weight = weightField.getText();
 
         String query = "SELECT name, gender, identitynumber FROM patient WHERE 1=1";
 
-        if (!name.isEmpty()) query += " AND name LIKE '%" + name + "%'";
-        if (!id.isEmpty()) query += " AND identitynumber LIKE '%" + id + "%'";
+        if (!nameField.getText().isEmpty()) query += " AND name LIKE '%" + nameField.getText() + "%'";
+        if (!idField.getText().isEmpty()) query += " AND identitynumber LIKE '%" + idField.getText() + "%'";
         if (male.isSelected()) query += " AND gender = '남'";
         if (female.isSelected()) query += " AND gender = '여'";
-        if (!phone.isEmpty()) query += " AND phone LIKE '%" + phone + "%'";
-        if (!bloodType.equals("전체")) query += " AND bloodType = '" + bloodType + "'";
-        if (!address.isEmpty()) query += " AND address LIKE '%" + address + "%'";
-        if (!height.isEmpty()) query += " AND height = " + height;
-        if (!weight.isEmpty()) query += " AND weight = " + weight;
+        if (!phoneField.getText().isEmpty()) query += " AND phone LIKE '%" + phoneField.getText() + "%'";
+        if (!bloodTypeBox.getSelectedItem().toString().equals("전체"))
+            query += " AND bloodType = '" + bloodTypeBox.getSelectedItem().toString() + "'";
+        if (!addressField.getText().isEmpty()) query += " AND address LIKE '%" + addressField.getText() + "%'";
+        if (!heightField.getText().isEmpty()) query += " AND height = " + heightField.getText();
+        if (!weightField.getText().isEmpty()) query += " AND weight = " + weightField.getText();
 
         query += " ORDER BY name";
 
@@ -298,6 +292,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
     Connection conn;
     Statement st;
     PatientListPanel patientListPanel;
+    PatientConditionPanel patientConditionPanel;
 
     public PatientDetailsPanel(Connection conn, Statement st) {
         this.conn = conn;
@@ -316,7 +311,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         setBorder(BorderFactory.createTitledBorder("환자 정보"));
 
 // 왼쪽 열 - 레이블 및 텍스트 필드
-        JLabel nameLabel = new JLabel("이름:");
+        JLabel nameLabel = new JLabel("이름");
         nameLabel.setBounds(xValue, yValue, labelWidth, height);
         add(nameLabel);
 
@@ -325,7 +320,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         nameField.setEditable(false);
         add(nameField);
 
-        JLabel idLabel = new JLabel("주민번호:");
+        JLabel idLabel = new JLabel("주민번호");
         idLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(idLabel);
 
@@ -334,7 +329,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         idField.setEditable(false);
         add(idField);
 
-        JLabel genderLabel = new JLabel("성별:");
+        JLabel genderLabel = new JLabel("성별");
         genderLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         add(genderLabel);
 
@@ -351,7 +346,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         add(male);
         add(female);
 
-        JLabel bloodTypeLabel = new JLabel("혈액형:");
+        JLabel bloodTypeLabel = new JLabel("혈액형");
         bloodTypeLabel.setBounds(xValue, yValue + 3 * spacing, labelWidth, height);
         add(bloodTypeLabel);
 
@@ -360,7 +355,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         bloodTypeBox.setBounds(xValue + labelWidth, yValue + 3 * spacing, fieldWidth, height);
         add(bloodTypeBox);
 
-        JLabel cautionLabel = new JLabel("주의사항:");
+        JLabel cautionLabel = new JLabel("주의사항");
         cautionLabel.setBounds(xValue, yValue + 4 * spacing, labelWidth, height);
         add(cautionLabel);
 
@@ -371,7 +366,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
 // 오른쪽 열 - 레이블 및 텍스트 필드
         xValue += labelWidth + fieldWidth + 60; // 오른쪽 열로 이동
 
-        JLabel phoneLabel = new JLabel("연락처:");
+        JLabel phoneLabel = new JLabel("연락처");
         phoneLabel.setBounds(xValue, yValue, labelWidth, height);
         add(phoneLabel);
 
@@ -379,23 +374,23 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         phoneField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(phoneField);
 
-        JLabel heightLabel = new JLabel("키:");
+        JLabel heightLabel = new JLabel("키");
         heightLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(heightLabel);
 
-        heightField = new JTextField();
+        heightField = new NumberTextField(3);
         heightField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         add(heightField);
 
-        JLabel weightLabel = new JLabel("몸무게:");
+        JLabel weightLabel = new JLabel("몸무게");
         weightLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         add(weightLabel);
 
-        weightField = new JTextField();
+        weightField = new NumberTextField(3);
         weightField.setBounds(xValue + labelWidth, yValue + 2 * spacing, fieldWidth, height);
         add(weightField);
 
-        JLabel addressLabel = new JLabel("주소:");
+        JLabel addressLabel = new JLabel("주소");
         addressLabel.setBounds(xValue, yValue + 3 * spacing, labelWidth, height);
         add(addressLabel);
 
@@ -422,8 +417,12 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
             nameField.setText(rs.getString("name"));
             idField.setText(rs.getString("identitynumber"));
             switch (rs.getString("gender")) {
-                case "남": male.setSelected(true);break;
-                case "여": female.setSelected(true);break;
+                case "남":
+                    male.setSelected(true);
+                    break;
+                case "여":
+                    female.setSelected(true);
+                    break;
             }
             bloodTypeBox.setSelectedItem(rs.getString("bloodtype") == null ? "선택되지 않음" : rs.getString("bloodtype"));
             cautionArea.setText(rs.getString("caution"));
@@ -439,6 +438,10 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
 
     public void setPatientListPanel(PatientListPanel patientListPanel) {
         this.patientListPanel = patientListPanel;
+    }
+
+    public void setPatientConditionPanel(PatientConditionPanel patientConditionPanel) {
+        this.patientConditionPanel = patientConditionPanel;
     }
 
     @Override
@@ -459,6 +462,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
                     pstm.setInt(8, patientId);
                     if (pstm.executeUpdate() > 0) {
                         JOptionPane.showMessageDialog(this, "수정 성공");
+                        patientConditionPanel.searchPatient();
                     } else {
                         JOptionPane.showMessageDialog(this, "수정 실패");
                     }
@@ -475,6 +479,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
                     pstm.setInt(1, patientId);
                     if (pstm.executeUpdate() > 0) {
                         JOptionPane.showMessageDialog(this, "삭제 성공");
+                        patientConditionPanel.searchPatient();
                     } else {
                         JOptionPane.showMessageDialog(this, "삭제 실패");
                     }
@@ -492,9 +497,11 @@ class PatientAddWindow extends JFrame implements ActionListener {
     JTextField nameField, phoneField, idField1, idField2, heightField, weightField, addressField;
     JTextArea cautionArea;
     JRadioButton male, female, A, B, O, AB;
+    PatientConditionPanel patientConditionPanel;
 
-    public PatientAddWindow(Connection conn) {
+    public PatientAddWindow(Connection conn, PatientConditionPanel patientConditionPanel) {
         this.conn = conn;
+        this.patientConditionPanel = patientConditionPanel;
 
         setTitle("환자 추가");
         setSize(600, 500);
@@ -534,7 +541,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
         idLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         mainPanel.add(idLabel);
 
-        idField1 = new JTextField(6);
+        idField1 = new NumberTextField(6);
         idField1.setBounds(xValue + labelWidth, yValue + spacing, 70, height);
         mainPanel.add(idField1);
 
@@ -542,7 +549,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
         bar.setBounds(xValue + 173, yValue + spacing, 4, height);
         mainPanel.add(bar);
 
-        idField2 = new JTextField(7);
+        idField2 = new NumberTextField(7);
         idField2.setBounds(xValue + 180, yValue + spacing, 70, height);
         mainPanel.add(idField2);
 
@@ -600,7 +607,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
         phoneLabel.setBounds(xValue, yValue, labelWidth, height);
         mainPanel.add(phoneLabel);
 
-        phoneField = new JTextField();
+        phoneField = new NumberTextField(11);
         phoneField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         mainPanel.add(phoneField);
 
@@ -608,7 +615,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
         heightLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         mainPanel.add(heightLabel);
 
-        heightField = new JTextField();
+        heightField = new NumberTextField(3);
         heightField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
         mainPanel.add(heightField);
 
@@ -616,7 +623,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
         weightLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         mainPanel.add(weightLabel);
 
-        weightField = new JTextField();
+        weightField = new NumberTextField(3);
         weightField.setBounds(xValue + labelWidth, yValue + 2 * spacing, fieldWidth, height);
         mainPanel.add(weightField);
 
@@ -672,6 +679,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
 
                     if (pstm.executeUpdate() > 0) {
                         JOptionPane.showMessageDialog(this, "추가 성공");
+                        patientConditionPanel.searchPatient();
                         dispose();
                     } else {
                         JOptionPane.showMessageDialog(this, "추가 실패");
@@ -688,3 +696,34 @@ class PatientAddWindow extends JFrame implements ActionListener {
     }
 }
 
+class NumberTextField extends JTextField implements KeyListener {
+    int maxLength;
+
+    public NumberTextField(int maxLength) {
+        this.maxLength = maxLength;
+        this.addKeyListener(this);
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+        char c = e.getKeyChar();
+
+        if (!Character.isDigit(c)) {
+            e.consume();
+        }
+
+        if (getText().length() >= maxLength) {
+            e.consume();
+        }
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+
+    }
+}
