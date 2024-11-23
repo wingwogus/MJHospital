@@ -1,5 +1,7 @@
 package MJHospital;
 
+import com.formdev.flatlaf.FlatLightLaf;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -7,7 +9,13 @@ import java.awt.*;
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) {
-        Login login = new Login();
-        login.setVisible(true);
+        try {
+            FlatLightLaf.setup();
+        } catch (Exception ex) {
+            System.err.println("Failed to initialize FlatLaf");
+        }
+
+        Login lFrame = new Login();
+        lFrame.setVisible(true);
     }
 }

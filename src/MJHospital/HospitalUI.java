@@ -9,6 +9,7 @@ class HospitalUI extends JFrame {
         setTitle("Main");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 720); // 필요한 크기로 설정
+        setLocationRelativeTo(null); // 프레임 중앙
         setResizable(false);
 
         // 상단 패널 생성
@@ -17,7 +18,7 @@ class HospitalUI extends JFrame {
         topPanel.setBackground(Color.LIGHT_GRAY); // 배경색 설정 (선택사항)
 
         // 병원 로고 및 이름 레이블
-        JLabel hospitalLabel = new JLabel("MJ HOSPITAL", new ImageIcon("src/img/mjicon.png"), JLabel.LEFT);
+        JLabel hospitalLabel = new JLabel("MJ HOSPITAL", new ImageIcon("images/mjicon.png"), JLabel.LEFT);
         hospitalLabel.setFont(new Font("Serif", Font.BOLD, 30));
         topPanel.add(hospitalLabel, BorderLayout.WEST);
 
