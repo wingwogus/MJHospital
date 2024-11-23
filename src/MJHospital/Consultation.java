@@ -7,7 +7,7 @@
     import java.sql.*;
     import java.util.Vector;
 
-    public class Consultation extends JFrame {
+    public class Consultation extends Panel {
         private JList<String> patientList;
         private DefaultTableModel recordTableModel;
         private JTable recordTable;
@@ -18,14 +18,15 @@
         public String currentStaffId; // id를 로그인한 사용자 별로 동적으로 가져옴
 
         public Consultation(String staffId) {
+
+            setLayout(new BorderLayout());
+            add(new JLabel("진료", SwingConstants.CENTER), BorderLayout.NORTH);
+
             // 데이터베이스 연결
             this.currentStaffId = staffId;
             connectToDatabase();
 
-            setTitle("MJ Hospital Management");
             setSize(1000, 600);
-            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            setLocationRelativeTo(null);
             setLayout(new BorderLayout());
 
             // 좌측 p1 : 환자 리스트
