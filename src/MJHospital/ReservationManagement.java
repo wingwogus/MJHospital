@@ -801,6 +801,8 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         doctorSearchButton.addActionListener(this);
         year.addActionListener(this);
         month.addActionListener(this);
+        patientField.addActionListener(this);
+        doctorField.addActionListener(this);
 
         add(mainPanel, BorderLayout.CENTER);
     }
@@ -811,10 +813,10 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
             if (JOptionPane.showConfirmDialog(this, patientField.getText() + " 환자 예약을 추가하시겠습니까?") == 0) {
                 addReservation();
             }
-        } else if (e.getSource() == patientSearchButton) {
+        } else if (e.getSource() == patientSearchButton || e.getSource() == patientField) {
             setPatientData(patientField.getText());
             patientTurn = true;
-        } else if (e.getSource() == doctorSearchButton) {
+        } else if (e.getSource() == doctorSearchButton || e.getSource() == doctorField) {
             setDoctorData(doctorField.getText());
             patientTurn = false;
         } else if(e.getSource() == year || e.getSource() == month) {
