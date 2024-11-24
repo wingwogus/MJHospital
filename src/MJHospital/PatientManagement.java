@@ -182,8 +182,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
     }
 
     public void searchPatient() {
-
-        String query = "SELECT name, gender, identitynumber FROM patient WHERE 1=1";
+        String query = "SELECT * FROM patient WHERE 1=1";
 
         if (!nameField.getText().isEmpty()) query += " AND name LIKE '%" + nameField.getText() + "%'";
         if (!idField.getText().isEmpty()) query += " AND identitynumber LIKE '%" + idField.getText() + "%'";
@@ -196,12 +195,13 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         if (!heightField.getText().isEmpty()) query += " AND height = " + heightField.getText();
         if (!weightField.getText().isEmpty()) query += " AND weight = " + weightField.getText();
 
-        query += " ORDER BY name";
+        query += " ORDER BY patientid";
 
         try (ResultSet rs = st.executeQuery(query)) {
             Vector<Vector<String>> dataVector = new Vector<>();
             while (rs.next()) {
                 Vector<String> row = new Vector<>();
+                row.add(String.format("%04d", rs.getInt("patientid")));
                 row.add(rs.getString("name"));
                 row.add(rs.getString("gender"));
                 row.add(rs.getString("identitynumber"));
@@ -231,15 +231,16 @@ class PatientListPanel extends JPanel implements MouseListener {
         tablePanel.setPreferredSize(new Dimension(300, 600));
 
         //tableModel 및 Jtable 생성
-        String[] columnNames = {"환자명", "성별", "주민번호"};
+        String[] columnNames = {"환자id", "환자명", "성별", "주민번호"};
         tableModel = new DefaultTableModel(columnNames, 0);
         table = new JTable(tableModel);
 
         //table 레이아웃 설정
         table.setDefaultEditor(Object.class, null);
         table.getColumnModel().getColumn(0).setPreferredWidth(50);
-        table.getColumnModel().getColumn(1).setPreferredWidth(30);
-        table.getColumnModel().getColumn(2).setPreferredWidth(150);
+        table.getColumnModel().getColumn(1).setPreferredWidth(50);
+        table.getColumnModel().getColumn(2).setPreferredWidth(30);
+        table.getColumnModel().getColumn(3).setPreferredWidth(150);
 
         JScrollPane scrollPane = new JScrollPane(table);
         tablePanel.add(scrollPane);
@@ -258,8 +259,8 @@ class PatientListPanel extends JPanel implements MouseListener {
     @Override
     public void mouseClicked(MouseEvent e) {
         int row = table.getSelectedRow();
-        String id = (String) tableModel.getValueAt(row, 2);
-        patientDetailsPanel.setData(id);
+        String patientId = (String) tableModel.getValueAt(row, 0);
+        patientDetailsPanel.setData(patientId);
     }
 
     @Override
@@ -285,7 +286,7 @@ class PatientListPanel extends JPanel implements MouseListener {
 
 class PatientDetailsPanel extends JPanel implements ActionListener {
     JComboBox<String> bloodTypeBox;
-    JTextField nameField, idField, phoneField, heightField, weightField, addressField;
+    JTextField nameField, patientIdField, identityField, phoneField, heightField, weightField, addressField;
     JTextArea cautionArea;
     JRadioButton male, female;
     int patientId;
@@ -316,18 +317,28 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         add(nameLabel);
 
         nameField = new JTextField();
-        nameField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
+        nameField.setBounds(xValue + labelWidth, yValue, fieldWidth - 120, height);
         nameField.setEditable(false);
         add(nameField);
+
+
+        JLabel patientIdLabel = new JLabel("환자 id");
+        patientIdLabel.setBounds(xValue + labelWidth + fieldWidth - 120 + 10, yValue, labelWidth, height);
+        add(patientIdLabel);
+
+        patientIdField = new JTextField();
+        patientIdField.setBounds(xValue + 2 * labelWidth + fieldWidth - 120, yValue, fieldWidth - 140, height);
+        patientIdField.setEditable(false);
+        add(patientIdField);
 
         JLabel idLabel = new JLabel("주민번호");
         idLabel.setBounds(xValue, yValue + spacing, labelWidth, height);
         add(idLabel);
 
-        idField = new JTextField();
-        idField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
-        idField.setEditable(false);
-        add(idField);
+        identityField = new JTextField();
+        identityField.setBounds(xValue + labelWidth, yValue + spacing, fieldWidth, height);
+        identityField.setEditable(false);
+        add(identityField);
 
         JLabel genderLabel = new JLabel("성별");
         genderLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
@@ -409,13 +420,14 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         add(deleteButton);
     }
 
-    public void setData(String id) {
-        String query = "SELECT * FROM patient WHERE identitynumber = '" + id + "'";
+    public void setData(String patientId) {
+        String query = "SELECT * FROM patient WHERE patientid = " + patientId;
         try (ResultSet rs = st.executeQuery(query)) {
             rs.next();
-            patientId = rs.getInt("patientid");
+            this.patientId = rs.getInt("patientid");
             nameField.setText(rs.getString("name"));
-            idField.setText(rs.getString("identitynumber"));
+            patientIdField.setText(patientId);
+            identityField.setText(rs.getString("identitynumber"));
             switch (rs.getString("gender")) {
                 case "남":
                     male.setSelected(true);
@@ -434,14 +446,6 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
             JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
             e.printStackTrace();
         }
-    }
-
-    public void setPatientListPanel(PatientListPanel patientListPanel) {
-        this.patientListPanel = patientListPanel;
-    }
-
-    public void setPatientConditionPanel(PatientConditionPanel patientConditionPanel) {
-        this.patientConditionPanel = patientConditionPanel;
     }
 
     @Override
@@ -489,6 +493,14 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
                 }
             }
         }
+    }
+
+    public void setPatientListPanel(PatientListPanel patientListPanel) {
+        this.patientListPanel = patientListPanel;
+    }
+
+    public void setPatientConditionPanel(PatientConditionPanel patientConditionPanel) {
+        this.patientConditionPanel = patientConditionPanel;
     }
 }
 
