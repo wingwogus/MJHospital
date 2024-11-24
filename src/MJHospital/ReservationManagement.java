@@ -229,16 +229,30 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
                     row.add(rs.getString("reservationtime"));
                     row.add(rs.getString("patient.name"));
                     row.add(rs.getString("staff.name"));
+                    row.add(rs.getString("patient.patientid"));
                     dataVector.add(row);
                 }
-
-                reservationListPanel.setData(dataVector);
+                isFirst(dataVector);
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
                 System.out.println(ex.getMessage());
                 ex.printStackTrace();
             }
         }
+    }
+
+    public void isFirst(Vector<Vector<String>> dataVector) {
+        for (Vector<String> row : dataVector) {
+            String query = "SELECT * FROM consultation WHERE patientid = " + row.elementAt(4);
+            try (ResultSet rs = st.executeQuery(query)) {
+                if (rs.next()) row.setElementAt("재진", 4);
+                else row.setElementAt("초진", 4);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        reservationListPanel.setData(dataVector);
     }
 }
 
@@ -256,7 +270,7 @@ class ReservationListPanel extends JPanel implements MouseListener {
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setPreferredSize(new Dimension(400, 600));
 
-        String[] columnNames = {"예약 날짜", "예약 시간", "환자명", "담당의"};
+        String[] columnNames = {"예약 날짜", "예약 시간", "환자명", "담당의", "재진 여부"};
         tableModel = new DefaultTableModel(columnNames, 0);
         table = new JTable(tableModel);
 
@@ -265,6 +279,7 @@ class ReservationListPanel extends JPanel implements MouseListener {
         table.getColumnModel().getColumn(1).setPreferredWidth(100);
         table.getColumnModel().getColumn(2).setPreferredWidth(50);
         table.getColumnModel().getColumn(3).setPreferredWidth(50);
+        table.getColumnModel().getColumn(4).setPreferredWidth(50);
 
         JScrollPane scrollPane = new JScrollPane(table);
         tablePanel.add(scrollPane);
@@ -855,14 +870,14 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     public void setPatientData(String name) {
-        String query = "SELECT name, gender, identitynumber FROM patient WHERE name LIKE '%" + name + "%'";
+        String query = "SELECT * FROM patient WHERE name LIKE '%" + name + "%'";
         Vector<Vector<String>> dataVector = new Vector<>();
         try {
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {
                 Vector<String> row = new Vector<>();
-                row.add(rs.getString("name"));
+                row.add(rs.getString("name") + "[" + String.format("%04d", rs.getInt("patientid")) + "]");
                 row.add(rs.getString("gender"));
                 row.add(rs.getString("identitynumber"));
                 dataVector.add(row);
@@ -907,8 +922,8 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
             tableModel.addRow(row);
         }
 
-        table.getColumnModel().getColumn(0).setPreferredWidth(50);
-        table.getColumnModel().getColumn(1).setPreferredWidth(50);
+        table.getColumnModel().getColumn(0).setPreferredWidth(70);
+        table.getColumnModel().getColumn(1).setPreferredWidth(30);
         table.getColumnModel().getColumn(2).setPreferredWidth(100);
         table.setDefaultEditor(Object.class, null);
 
@@ -930,13 +945,13 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     public void mouseClicked(MouseEvent e) {
         int row = table.getSelectedRow();
         if (patientTurn) {
-            patientField.setText(tableModel.getValueAt(row, 0).toString());
+            String name = tableModel.getValueAt(row, 0).toString();
+            patientField.setText(name.substring(0, name.length() - 6));
             idField.setText(tableModel.getValueAt(row, 2).toString());
         } else {
             doctorField.setText(tableModel.getValueAt(row, 0).toString());
             doctorId = (String) tableModel.getValueAt(row, 2);
         }
-
     }
 
     @Override
