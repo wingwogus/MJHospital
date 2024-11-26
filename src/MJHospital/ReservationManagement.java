@@ -5,6 +5,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Vector;
@@ -838,15 +839,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
                 "VALUES ((SELECT patientid FROM patient WHERE identitynumber = ?), (SELECT staffid FROM staff WHERE identitynumber = ?), ?, ?, ?)";
         try {
             PreparedStatement pstm = conn.prepareStatement(query);
-            if (patientField.getText().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "환자 이름을 입력하세요");
-                patientField.requestFocus();
-            } else if (doctorField.getText().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "담당의 이름을 입력하세요");
-                doctorField.requestFocus();
-            } else if (LocalDate.now().isAfter(reservationDate)) {
-                JOptionPane.showMessageDialog(this, "오늘 이후의 날짜를 선택해주세요");
-            } else {
+             if (checkDate(reservationDate) && checkField() && checkHoliday(reservationDate)) {
                 pstm.setString(1, idField.getText());
                 pstm.setString(2, doctorId);
                 pstm.setString(3, noteArea.getText().isEmpty() ? null : noteArea.getText());
@@ -868,7 +861,47 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "키와 몸무게는 숫자를 입력해주세요");
         }
+    }
 
+    public boolean checkDate(LocalDate reservationDate) {
+        if (LocalDate.now().isAfter(reservationDate)) {
+            JOptionPane.showMessageDialog(this, "오늘 이후의 날짜를 선택해주세요");
+            return false;
+        } else if (reservationDate.getDayOfWeek() == DayOfWeek.SATURDAY || reservationDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            JOptionPane.showMessageDialog(this, "주말은 휴무입니다");
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkField() {
+        if (patientField.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "환자 이름을 입력하세요");
+            patientField.requestFocus();
+            return false;
+        } else if (doctorField.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "담당의 이름을 입력하세요");
+            doctorField.requestFocus();
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkHoliday(LocalDate reservationDate) {
+        String query = "SELECT off FROM staff WHERE identitynumber = '" + doctorId + "'";
+        try {
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
+            rs.next();
+            int offDay = Integer.parseInt(rs.getString("off"));
+            if (reservationDate.getDayOfWeek().getValue() == offDay) {
+                JOptionPane.showMessageDialog(null, "그날은 해당 의사분의 휴일입니다");
+                return false;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return true;
     }
 
     public void setPatientData(String name) {
@@ -920,14 +953,14 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         table = new JTable(tableModel);
         table.addMouseListener(this);
 
-        for (Vector<String> row : dataVector) {
-            tableModel.addRow(row);
-        }
-
         table.getColumnModel().getColumn(0).setPreferredWidth(70);
         table.getColumnModel().getColumn(1).setPreferredWidth(30);
         table.getColumnModel().getColumn(2).setPreferredWidth(100);
         table.setDefaultEditor(Object.class, null);
+
+        for (Vector<String> row : dataVector) {
+            tableModel.addRow(row);
+        }
 
         scrollPane.setViewportView(table);
     }
