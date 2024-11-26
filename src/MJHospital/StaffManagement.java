@@ -244,7 +244,6 @@ class AddStaff extends JFrame {
     public AddStaff() {
         setTitle("의료진 추가");
         setSize(600, 600);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(new Color(200, 200, 200));
 
