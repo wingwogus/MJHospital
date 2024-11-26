@@ -381,7 +381,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         phoneLabel.setBounds(xValue, yValue, labelWidth, height);
         add(phoneLabel);
 
-        phoneField = new JTextField();
+        phoneField = new NumberTextField(11);
         phoneField.setBounds(xValue + labelWidth, yValue, fieldWidth, height);
         add(phoneField);
 

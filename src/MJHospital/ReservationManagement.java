@@ -129,11 +129,11 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         day2 = new JComboBox<>(days);
 
         year.setSelectedItem(now.getYear());
-        year2.setSelectedItem(now.plusDays(7).getYear());
+        year2.setSelectedItem(now.getYear());
         month.setSelectedItem(now.getMonthValue());
-        month2.setSelectedItem(now.plusDays(7).getMonthValue());
+        month2.setSelectedItem(now.getMonthValue());
         day.setSelectedItem(now.getDayOfMonth());
-        day2.setSelectedItem(now.plusDays(7).getDayOfMonth());
+        day2.setSelectedItem(now.getDayOfMonth());
         JLabel wave = new JLabel("~");
 
         year.setBounds(xValue, yValue, 60, height);
@@ -936,10 +936,12 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         LocalDate date = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), 1);
         LocalDate afterDate = date.plusMonths(1);
         Vector<Integer> days = new Vector<>();
+
         while (date.isBefore(afterDate)) {
             days.add(date.getDayOfMonth());
             date = date.plusDays(1);
         }
+
         day.setModel(new DefaultComboBoxModel<>(days));
     }
 
