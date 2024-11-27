@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.*;
 
 class Login extends JFrame implements ActionListener {
     JLabel idLabel, passwordLabel, nameLabel, logoLabel, minLogoLabel;
@@ -12,8 +13,12 @@ class Login extends JFrame implements ActionListener {
     JButton loginButton, cancelButton;
     JPanel topPanel, centerPanel, buttonPanel;
     ImageIcon logoIcon, minLogoIcon;
+    Connection connection;
+    Statement statement;
+    ResultSet resultSet;
 
     Login() {
+        connectToDatabase();
         setTitle("Login");
         setSize(600, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -79,20 +84,79 @@ class Login extends JFrame implements ActionListener {
         buttonPanel.add(cancelButton);
 
         loginButton.addActionListener(this);
-
         cancelButton.addActionListener(this);
+        idField.addActionListener(this);
+        passwordField.addActionListener(this);
+    }
+
+    private void connectToDatabase() {
+        try {
+            connection = DriverManager.getConnection(
+                    "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital",
+                    "hyeni", "0705"
+            );
+            statement = connection.createStatement();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "DB 연결 실패: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public void actionPerformed(ActionEvent e) {
-        String s = e.getActionCommand();
-        if (s.equals("Login")) {
-            HospitalUI uiFrame = new HospitalUI();
-            uiFrame.setVisible(true);
-            this.dispose();
+        if (e.getSource() == loginButton || e.getSource() == idField || e.getSource() == passwordField) {
+            check();
         }
-        else if (s.equals("Cancel")) {
+        else if (e.getSource() == cancelButton) {
             idField.setText("");
             passwordField.setText("");
         }
+    }
+
+    public void check() {
+        String id = idField.getText();
+        String password = passwordField.getText();
+        String idQuery = "SELECT password, is_active, name, roleid FROM staff WHERE staffid = '" + id + "'";
+
+        try {
+            resultSet = statement.executeQuery(idQuery);
+            if (resultSet.next()) {
+                int isActive = resultSet.getInt("is_active");
+                String storedPassword = resultSet.getString("password");
+                if (isActive != 0) {
+                    if (password.equals(storedPassword)) {
+                        String name = resultSet.getString("name");
+                        String role;
+                        if (resultSet.getInt("roleid") == 0) {
+                            role = "admin";
+                        }
+                        else if (resultSet.getInt("roleid") == 1) {
+                            role = "dortor";
+                        }
+                        else if (resultSet.getInt("roleid") == 2) {
+                            role = "nurse";
+                        }
+                        else {
+                            role = "오류";
+                        }
+                        HospitalUI uiFrame = new HospitalUI(name, role);
+                        uiFrame.setVisible(true);
+                        this.dispose();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "비밀번호가 일치하지 않습니다",
+                                "Message", JOptionPane.ERROR_MESSAGE);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "비활성화된 계정입니다. 관리자에게 문의하세요",
+                            "Message", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "사용자를 찾을 수 없습니다",
+                        "Message", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
+            e.printStackTrace();
+        }
+
     }
 }

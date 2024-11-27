@@ -5,28 +5,51 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Vector;
 
 class StaffManagement extends JPanel {
-    StaffInfo staffInfo = new StaffInfo();
-    StaffList staffList = new StaffList();
+    Connection connection;
+    Statement statement;
+    StaffList staffList = new StaffList(connection, statement);
+    StaffInfo staffInfo = new StaffInfo(connection, statement);
 
     public StaffManagement() {
         setLayout(new BorderLayout());
         add(staffList, BorderLayout.WEST);
         add(staffInfo, BorderLayout.CENTER);
+        connectToDatabase();
+    }
+
+    private void connectToDatabase() {
+        try {
+            connection = DriverManager.getConnection(
+                    "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital",
+                    "hyeni", "0705"
+            );
+            statement = connection.createStatement();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "DB 연결 실패: " + e.getMessage());
+        }
     }
 }
 
 class StaffList extends JPanel implements ActionListener {
-    private Vector<String> columnNames;
-    private Vector<Vector<String>> data;
-    private DefaultTableModel model;
-    private JTable table;
+    Vector<String> columnNames;
+    Vector<Vector<String>> data;
+    DefaultTableModel model;
+    JTable table;
+    Connection connection;
+    Statement statement;
 
-    public StaffList() {
+    public StaffList(Connection c, Statement s) {
+        connection = c;
+        statement = s;
         setLayout(new BorderLayout());
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(BorderFactory.createTitledBorder("의료진 검색"));
         setPreferredSize(new Dimension(300, getHeight()));
 
         // 검색 패널
@@ -88,36 +111,29 @@ class StaffList extends JPanel implements ActionListener {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 
-        // 추가 버튼
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton addButton = new JButton("추가");
-        buttonPanel.add(addButton);
-
-        addButton.addActionListener(this);
-
         add(searchPanel, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
     }
 
     public void actionPerformed(ActionEvent e) {
         String s = e.getActionCommand();
-        if (s.equals("추가")) {
-            AddStaff addStaff = new AddStaff();
-            addStaff.setVisible(true);
-        }
-        else if (s.equals("검색")){
+        if (s.equals("검색")){
 
         }
     }
 }
 
 class StaffInfo extends JPanel implements ActionListener {
-    public StaffInfo() {
-        setLayout(new BorderLayout());
-        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
+    Connection connection;
+    Statement statement;
+    public StaffInfo(Connection c, Statement s) {
         Color backgroundColor = new Color(200, 200, 200);
+
+        connection = c;
+        statement = s;
+
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createTitledBorder("의료진 정보"));
 
         // 타이틀
         JLabel topLabel = new JLabel(" STAFF INFO");
@@ -129,103 +145,104 @@ class StaffInfo extends JPanel implements ActionListener {
         topPanel.setPreferredSize(new Dimension(getWidth(), 50));
         topPanel.add(topLabel);
 
-        JPanel centerPanel = new JPanel(new GridLayout(5, 2));
+        // 중앙 패널
+        JPanel centerPanel = new JPanel(null);
         centerPanel.setBackground(backgroundColor);
 
         JLabel nameLabel = new JLabel("이름");
-        nameLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        nameLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel IDLabel = new JLabel("ID");
-        IDLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        IDLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel passwdLabel = new JLabel("PASSWORD");
-        passwdLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        passwdLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel idNumLabel = new JLabel("주민번호");
-        idNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        idNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel titleLabel = new JLabel("직급");
-        titleLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        titleLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel phoneNumLabel = new JLabel("연락처");
-        phoneNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        phoneNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel majorLabel = new JLabel("전공");
-        majorLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
-        JLabel offDayLabel = new JLabel("휴뮤일");
-        offDayLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        majorLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
+        JLabel offDayLabel = new JLabel("휴무일");
+        offDayLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel addressLabel = new JLabel("주소");
-        addressLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        addressLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
 
-        JTextField nameField = new JTextField(20);
-        JTextField IDField = new JTextField(20);
-        JTextField passwdField = new JTextField(20);
-        JTextField idNumField = new JTextField(20);
-        JTextField titleField = new JTextField(20);
-        JTextField phoneNumField = new JTextField(20);
-        JTextField majorField = new JTextField(20);
-        JTextField offDayField = new JTextField(20);
-        JTextField addressField = new JTextField(20);
+        JTextField nameField = new JTextField();
+        nameField.setEditable(false);
+        JTextField IDField = new JTextField();
+        IDField.setEditable(false);
+        JTextField passwdField = new JTextField();
+        JTextField idNumField = new JTextField();
+        idNumField.setEditable(false);
+        JTextField titleField = new JTextField();
+        titleField.setEditable(false);
+        JTextField phoneNumField = new JTextField();
+        JTextField majorField = new JTextField();
+        JTextField offDayField = new JTextField();
+        JTextArea addressArea = new JTextArea();
+        addressArea.setLineWrap(true);
+        JScrollPane addressScroll = new JScrollPane(addressArea);
 
-        JPanel namePanel = new JPanel(new BorderLayout());
-        JPanel IDPanel = new JPanel(new BorderLayout());
-        JPanel passwdPanel = new JPanel(new BorderLayout());
-        JPanel idNumPanel = new JPanel(new BorderLayout());
-        JPanel titlePanel = new JPanel(new BorderLayout());
-        JPanel phoneNumPanel = new JPanel(new BorderLayout());
-        JPanel majorPanel = new JPanel(new BorderLayout());
-        JPanel offDayPanel = new JPanel(new BorderLayout());
-        JPanel addressPanel = new JPanel(new BorderLayout());
+        int xLabel1 = 200;
+        int xField1 = 350;
 
-        namePanel.setBackground(backgroundColor);
-        namePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        IDPanel.setBackground(backgroundColor);
-        IDPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        passwdPanel.setBackground(backgroundColor);
-        passwdPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        idNumPanel.setBackground(backgroundColor);
-        idNumPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        titlePanel.setBackground(backgroundColor);
-        titlePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        phoneNumPanel.setBackground(backgroundColor);
-        phoneNumPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        majorPanel.setBackground(backgroundColor);
-        majorPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        offDayPanel.setBackground(backgroundColor);
-        offDayPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        addressPanel.setBackground(backgroundColor);
-        addressPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        int xLabel2 = 500;
+        int xField2 = 650;
 
-        namePanel.add(nameLabel, BorderLayout.CENTER);
-        namePanel.add(nameField, BorderLayout.EAST);
-        IDPanel.add(IDLabel, BorderLayout.WEST);
-        IDPanel.add(IDField, BorderLayout.EAST);
-        passwdPanel.add(passwdLabel, BorderLayout.WEST);
-        passwdPanel.add(passwdField, BorderLayout.EAST);
-        idNumPanel.add(idNumLabel, BorderLayout.WEST);
-        idNumPanel.add(idNumField, BorderLayout.EAST);
-        titlePanel.add(titleLabel, BorderLayout.WEST);
-        titlePanel.add(titleField, BorderLayout.EAST);
-        phoneNumPanel.add(phoneNumLabel, BorderLayout.WEST);
-        phoneNumPanel.add(phoneNumField, BorderLayout.EAST);
-        majorPanel.add(majorLabel, BorderLayout.WEST);
-        majorPanel.add(majorField, BorderLayout.EAST);
-        offDayPanel.add(offDayLabel, BorderLayout.WEST);
-        offDayPanel.add(offDayField, BorderLayout.EAST);
-        addressPanel.add(addressLabel, BorderLayout.WEST);
-        addressPanel.add(addressField, BorderLayout.EAST);
+        // 라벨 위치 설정
+        nameLabel.setBounds(xLabel1, 70, 100, 30);
+        IDLabel.setBounds(xLabel1, 140, 100, 30);
+        passwdLabel.setBounds(xLabel1, 210, 150, 30);
+        idNumLabel.setBounds(xLabel1, 280, 100, 30);
+        titleLabel.setBounds(xLabel1, 350, 100, 30);
+        phoneNumLabel.setBounds(xLabel2, 70, 100, 30);
+        majorLabel.setBounds(xLabel2, 140, 100, 30);
+        offDayLabel.setBounds(xLabel2, 210, 100, 30);
+        addressLabel.setBounds(xLabel2, 280, 100, 30);
 
-        centerPanel.add(namePanel);
-        centerPanel.add(phoneNumPanel);
-        centerPanel.add(IDPanel);
-        centerPanel.add(majorPanel);
-        centerPanel.add(passwdPanel);
-        centerPanel.add(offDayPanel);
-        centerPanel.add(idNumPanel);
-        centerPanel.add(addressPanel);
-        centerPanel.add(titlePanel);
+        // 텍스트필드 위치 설정
+        nameField.setBounds(xField1, 70, 110, 30);
+        IDField.setBounds(xField1, 140, 110, 30);
+        passwdField.setBounds(xField1, 210, 110, 30);
+        idNumField.setBounds(xField1, 280, 110, 30);
+        titleField.setBounds(xField1, 350, 110, 30);
+        phoneNumField.setBounds(xField2, 70, 110, 30);
+        majorField.setBounds(xField2, 140, 110, 30);
+        offDayField.setBounds(xField2, 210, 110, 30);
+        addressScroll.setBounds(570, 280, 220, 110);
+
+        centerPanel.add(nameLabel);
+        centerPanel.add(nameField);
+        centerPanel.add(IDLabel);
+        centerPanel.add(IDField);
+        centerPanel.add(passwdLabel);
+        centerPanel.add(passwdField);
+        centerPanel.add(idNumLabel);
+        centerPanel.add(idNumField);
+        centerPanel.add(titleLabel);
+        centerPanel.add(titleField);
+        centerPanel.add(phoneNumLabel);
+        centerPanel.add(phoneNumField);
+        centerPanel.add(majorLabel);
+        centerPanel.add(majorField);
+        centerPanel.add(offDayLabel);
+        centerPanel.add(offDayField);
+        centerPanel.add(addressLabel);
+        centerPanel.add(addressScroll);
 
         // 버튼 패널
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setBackground(backgroundColor);
+        JButton addButton = new JButton("추가");
         JButton editButton = new JButton("수정");
         JButton inactivationButton = new JButton("비활성화");
+
+        buttonPanel.add(addButton);
         buttonPanel.add(editButton);
         buttonPanel.add(inactivationButton);
 
+        addButton.addActionListener(this);
         editButton.addActionListener(this);
         inactivationButton.addActionListener(this);
 
@@ -235,56 +252,96 @@ class StaffInfo extends JPanel implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
-
+        String s = e.getActionCommand();
+        if (s.equals("추가")) {
+            AddStaff addStaff = new AddStaff(connection, statement);
+            addStaff.setVisible(true);
+        }
     }
 
 }
 
 class AddStaff extends JFrame {
-    public AddStaff() {
+    Connection connection;
+    Statement statement;
+    public AddStaff(Connection c, Statement s) {
+        connection = c;
+        statement = s;
+
         setTitle("의료진 추가");
-        setSize(600, 600);
+        setSize(500, 500);
         setLocationRelativeTo(null);
         getContentPane().setBackground(new Color(200, 200, 200));
 
+        //상단 패널
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBackground(Color.LIGHT_GRAY);
         topPanel.setPreferredSize(new Dimension(getWidth(), 50));
 
+        //타이틀 레이블
         JLabel topLabel = new JLabel("의료진 추가");
         topLabel.setFont(new Font("맑은 고딕", Font.BOLD, 30));
         topPanel.add(topLabel);
 
+        //메인 패널
         JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new GridLayout(8, 2, 10, 20));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setLayout(null);
         mainPanel.setBackground(new Color(200, 200, 200));
 
+        //메인패널 컴포넌트
         JLabel nameLabel = new JLabel("이름");
-        nameLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        nameLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel IDLabel = new JLabel("ID");
-        IDLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        IDLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel passwdLabel = new JLabel("PASSWORD");
-        passwdLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        passwdLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel idNumLabel = new JLabel("주민번호");
-        idNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        idNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel phoneNumLabel = new JLabel("연락처");
-        phoneNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        phoneNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel majorLabel = new JLabel("전공");
-        majorLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
-        JLabel offDayLabel = new JLabel("휴뮤일");
-        offDayLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        majorLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
+        JLabel offDayLabel = new JLabel("휴무일");
+        offDayLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel addressLabel = new JLabel("주소");
-        addressLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 25));
+        addressLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
 
-        JTextField nameField = new JTextField(20);
-        JTextField IDField = new JTextField(20);
-        JTextField passwdField = new JTextField(20);
-        JTextField idNumField = new JTextField(20);
-        JTextField phoneNumField = new JTextField(20);
-        JTextField majorField = new JTextField(20);
-        JTextField offDayField = new JTextField(20);
-        JTextField addressField = new JTextField(20);
+        JTextField nameField = new JTextField();
+        JTextField IDField = new JTextField();
+        JTextField passwdField = new JTextField();
+        JTextField idNumField = new JTextField();
+        JTextField phoneNumField = new JTextField();
+        JTextField majorField = new JTextField();
+        JTextField offDayField = new JTextField();
+        JTextArea addressArea = new JTextArea();
+
+        addressArea.setLineWrap(true);
+        JScrollPane addressScroll = new JScrollPane(addressArea);
+
+        int xLabel1 = 30;
+        int xLabel2 = 250;
+        int xField1 = 120;
+        int xField2 = 340;
+
+        // 라벨 위치 설정
+        nameLabel.setBounds(xLabel1, 50, 100, 30);
+        IDLabel.setBounds(xLabel1, 120, 100, 30);
+        passwdLabel.setBounds(xLabel1, 190, 150, 30);
+        idNumLabel.setBounds(xLabel1, 260, 100, 30);
+        phoneNumLabel.setBounds(xLabel2, 50, 100, 30);
+        majorLabel.setBounds(xLabel2, 120, 100, 30);
+        offDayLabel.setBounds(xLabel2, 190, 100, 30);
+        addressLabel.setBounds(xLabel2, 260, 100, 30);
+
+        // 텍스트필드 위치 설정
+        nameField.setBounds(xField1, 50, 110, 30);
+        IDField.setBounds(xField1, 120, 110, 30);
+        passwdField.setBounds(xField1, 190, 110, 30);
+        idNumField.setBounds(xField1, 260, 110, 30);
+        phoneNumField.setBounds(xField2, 50, 110, 30);
+        majorField.setBounds(xField2, 120, 110, 30);
+        offDayField.setBounds(xField2, 190, 110, 30);
+        addressScroll.setBounds(290, 260, 170, 50);
 
         mainPanel.add(nameLabel);
         mainPanel.add(nameField);
@@ -301,12 +358,23 @@ class AddStaff extends JFrame {
         mainPanel.add(offDayLabel);
         mainPanel.add(offDayField);
         mainPanel.add(addressLabel);
-        mainPanel.add(addressField);
+        mainPanel.add(addressScroll);
 
+        //버튼 패널
         JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(null);
+        buttonPanel.setPreferredSize(new Dimension(getWidth(), 70));
         buttonPanel.setBackground(new Color(200, 200, 200));
+
+        //버튼 컴포넌트
         JButton addButton = new JButton("추가");
+        JButton cancelButton = new JButton("취소");
+
+        addButton.setBounds(150, 0, 80, 30);
+        cancelButton.setBounds(250, 0, 80, 30);
+
         buttonPanel.add(addButton);
+        buttonPanel.add(cancelButton);
 
         add(topPanel, BorderLayout.NORTH);
         add(mainPanel, BorderLayout.CENTER);

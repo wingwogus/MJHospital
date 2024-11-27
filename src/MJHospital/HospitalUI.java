@@ -5,22 +5,38 @@ import java.awt.*;
 
 class HospitalUI extends JFrame {
 
-    public HospitalUI() {
+    public HospitalUI(String n, String r) {
         setTitle("Main");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1280, 720); // 필요한 크기로 설정
-        setLocationRelativeTo(null); // 프레임 중앙
+        setSize(1280, 720);
+        setLocationRelativeTo(null);
         setResizable(false);
+
+        String name = n;
+        String role = r;
 
         // 상단 패널 생성
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BorderLayout());
-        topPanel.setBackground(Color.LIGHT_GRAY); // 배경색 설정 (선택사항)
+        topPanel.setBackground(Color.LIGHT_GRAY);
+        topPanel.setPreferredSize(new Dimension(getWidth(), 70));
+
 
         // 병원 로고 및 이름 레이블
         JLabel hospitalLabel = new JLabel("MJ HOSPITAL", new ImageIcon("images/mjicon.png"), JLabel.LEFT);
         hospitalLabel.setFont(new Font("Serif", Font.BOLD, 30));
         topPanel.add(hospitalLabel, BorderLayout.WEST);
+
+        JPanel userPanel = new JPanel();
+        userPanel.setBackground(Color.LIGHT_GRAY);
+        userPanel.setPreferredSize(new Dimension(200, 40));
+        JLabel nameLabel =  new JLabel("이름: " + name);
+        JLabel roleLabel = new JLabel("직급: " + role);
+        nameLabel.setFont(new Font("Gothic", Font.PLAIN, 20));
+        roleLabel.setFont(new Font("Gothic", Font.PLAIN, 20));
+        userPanel.add(nameLabel);
+        userPanel.add(roleLabel);
+        topPanel.add(userPanel, BorderLayout.EAST);
 
         // 탭 패널 생성
         JTabbedPane tabbedPane = new JTabbedPane();
