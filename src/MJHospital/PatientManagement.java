@@ -9,7 +9,6 @@ import java.util.Vector;
 
 class PatientManagement extends JPanel {
     Connection conn;
-    Statement st;
     PatientListPanel patientListPanel;
     PatientConditionPanel patientConditionPanel;
     PatientDetailsPanel patientDetailsPanel;
@@ -21,13 +20,12 @@ class PatientManagement extends JPanel {
         String password = "1234";
         try {
             conn = DriverManager.getConnection(url, userName, password);
-            st = conn.createStatement();
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        patientDetailsPanel = new PatientDetailsPanel(conn, st);
+        patientDetailsPanel = new PatientDetailsPanel(conn);
         patientListPanel = new PatientListPanel(patientDetailsPanel);
-        patientConditionPanel = new PatientConditionPanel(patientListPanel, conn, st);
+        patientConditionPanel = new PatientConditionPanel(patientListPanel, conn);
 
         patientDetailsPanel.setPatientListPanel(patientListPanel);
         patientDetailsPanel.setPatientConditionPanel(patientConditionPanel);
@@ -44,18 +42,18 @@ class PatientManagement extends JPanel {
     }
 }
 
+
+
 class PatientConditionPanel extends JPanel implements ActionListener {
     Connection conn;
-    Statement st;
     PatientListPanel patientListPanel;
     JTextField nameField, idField, phoneField, addressField, heightField, weightField;
     JRadioButton allGender, male, female;
     JComboBox<String> bloodTypeBox;
 
-    public PatientConditionPanel(PatientListPanel patientListPanel, Connection conn, Statement st) {
+    public PatientConditionPanel(PatientListPanel patientListPanel, Connection conn) {
         this.patientListPanel = patientListPanel;
         this.conn = conn;
-        this.st = st;
 
         setLayout(null);
         setBorder(BorderFactory.createTitledBorder("환자 조건"));
@@ -159,7 +157,6 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         searchButton.setBounds(xValue, yValue, 80, 110);
         add(searchButton);
 
-        // Add ActionListener to the buttons
         nameField.addActionListener(this);
         idField.addActionListener(this);
         phoneField.addActionListener(this);
@@ -169,19 +166,23 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         addButton.addActionListener(this);
         searchButton.addActionListener(this);
 
-        searchPatient();
+        searchButton.doClick();
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getActionCommand().equals("추가")) {
-            new PatientAddWindow(conn, this).setVisible(true);
-        } else {
-            searchPatient();
+        try {
+            if (e.getActionCommand().equals("추가")) {
+                new PatientAddWindow(conn, this).setVisible(true);
+            } else {
+                searchPatient();
+            }
+        } catch (SQLException ex) {
+            System.out.println(ex.getMessage());
         }
     }
 
-    public void searchPatient() {
+    public void searchPatient() throws SQLException {
         String query = "SELECT * FROM patient WHERE 1=1";
 
         if (!nameField.getText().isEmpty()) query += " AND name LIKE '%" + nameField.getText() + "%'";
@@ -197,24 +198,27 @@ class PatientConditionPanel extends JPanel implements ActionListener {
 
         query += " ORDER BY patientid";
 
-        try (ResultSet rs = st.executeQuery(query)) {
-            Vector<Vector<String>> dataVector = new Vector<>();
-            while (rs.next()) {
-                Vector<String> row = new Vector<>();
-                row.add(String.format("%04d", rs.getInt("patientid")));
-                row.add(rs.getString("name"));
-                row.add(rs.getString("gender"));
-                row.add(rs.getString("identitynumber"));
-                dataVector.add(row);
-            }
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
+        Vector<Vector<String>> dataVector = new Vector<>();
 
-            patientListPanel.setData(dataVector);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-            ex.printStackTrace();
+        while (rs.next()) {
+            Vector<String> row = new Vector<>();
+            row.add(String.format("%04d", rs.getInt("patientid")));
+            row.add(rs.getString("name"));
+            row.add(rs.getString("gender"));
+            row.add(rs.getString("identitynumber"));
+            dataVector.add(row);
         }
+
+        patientListPanel.setData(dataVector);
+
+        st.close();
+        rs.close();
     }
 }
+
+
 
 class PatientListPanel extends JPanel implements MouseListener {
     JTable table;
@@ -260,7 +264,11 @@ class PatientListPanel extends JPanel implements MouseListener {
     public void mouseClicked(MouseEvent e) {
         int row = table.getSelectedRow();
         String patientId = (String) tableModel.getValueAt(row, 0);
-        patientDetailsPanel.setData(patientId);
+        try {
+            patientDetailsPanel.setData(patientId);
+        } catch (SQLException ex) {
+            System.out.println(ex.getMessage());
+        }
     }
 
     @Override
@@ -284,22 +292,21 @@ class PatientListPanel extends JPanel implements MouseListener {
     }
 }
 
+
+
 class PatientDetailsPanel extends JPanel implements ActionListener {
+    Connection conn;
     JComboBox<String> bloodTypeBox;
     JTextField nameField, patientIdField, identityField, phoneField, heightField, weightField, addressField;
     JTextArea cautionArea;
     JRadioButton male, female;
     int patientId;
-    Connection conn;
-    Statement st;
     PatientListPanel patientListPanel;
     PatientConditionPanel patientConditionPanel;
 
-    public PatientDetailsPanel(Connection conn, Statement st) {
+    public PatientDetailsPanel(Connection conn) {
         this.conn = conn;
-        this.st = st;
 
-        // 기본 x, y 좌표
         int xValue = 170;
         int yValue = 60;
         int labelWidth = 60;
@@ -307,11 +314,9 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         int height = 30;
         int spacing = 60;
 
-// null 레이아웃 설정
         setLayout(null);
         setBorder(BorderFactory.createTitledBorder("환자 정보"));
 
-// 왼쪽 열 - 레이블 및 텍스트 필드
         JLabel nameLabel = new JLabel("이름");
         nameLabel.setBounds(xValue, yValue, labelWidth, height);
         add(nameLabel);
@@ -374,7 +379,6 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         cautionArea.setBounds(xValue + labelWidth, yValue + 4 * spacing, fieldWidth, 3 * height);
         add(cautionArea);
 
-// 오른쪽 열 - 레이블 및 텍스트 필드
         xValue += labelWidth + fieldWidth + 60; // 오른쪽 열로 이동
 
         JLabel phoneLabel = new JLabel("연락처");
@@ -420,78 +424,87 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         add(deleteButton);
     }
 
-    public void setData(String patientId) {
-        String query = "SELECT * FROM patient WHERE patientid = " + patientId;
-        try (ResultSet rs = st.executeQuery(query)) {
-            rs.next();
-            this.patientId = rs.getInt("patientid");
-            nameField.setText(rs.getString("name"));
-            patientIdField.setText(patientId);
-            identityField.setText(rs.getString("identitynumber"));
-            switch (rs.getString("gender")) {
-                case "남":
-                    male.setSelected(true);
-                    break;
-                case "여":
-                    female.setSelected(true);
-                    break;
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        try {
+            //수정 버튼 클릭 시
+            if (e.getActionCommand().equals("수정")) {
+                modifyPatient();
+            } else if (e.getActionCommand().equals("삭제")) {
+                deletePatient();
             }
-            bloodTypeBox.setSelectedItem(rs.getString("bloodtype") == null ? "선택되지 않음" : rs.getString("bloodtype"));
-            cautionArea.setText(rs.getString("caution"));
-            phoneField.setText(rs.getString("phone"));
-            heightField.setText(rs.getString("height"));
-            weightField.setText(rs.getString("weight"));
-            addressField.setText(rs.getString("address"));
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-            e.printStackTrace();
+        } catch (SQLException ex) {
+            System.out.println(ex.getMessage());
         }
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        //수정 버튼 클릭 시
-        if (e.getActionCommand().equals("수정")) {
-            if (JOptionPane.showConfirmDialog(this, "수정하시겠습니까?") == 0) {
-                String query = "UPDATE patient SET phone = ?, gender = ?, bloodtype = ?, caution = ?, address = ?, height = ?, weight = ? WHERE patientid = ?";
-                try {
-                    PreparedStatement pstm = conn.prepareStatement(query);
-                    pstm.setString(1, phoneField.getText().isEmpty() ? null : phoneField.getText());
-                    pstm.setString(2, male.isSelected() ? "남" : "여");
-                    pstm.setString(3, bloodTypeBox.getSelectedItem().toString().equals("선택되지 않음") ? null : bloodTypeBox.getSelectedItem().toString());
-                    pstm.setString(4, cautionArea.getText().isEmpty() ? null : cautionArea.getText());
-                    pstm.setString(5, addressField.getText().isEmpty() ? null : addressField.getText());
-                    pstm.setString(6, heightField.getText().isEmpty() ? null : heightField.getText());
-                    pstm.setString(7, weightField.getText().isEmpty() ? null : weightField.getText());
-                    pstm.setInt(8, patientId);
-                    if (pstm.executeUpdate() > 0) {
-                        JOptionPane.showMessageDialog(this, "수정 성공");
-                        patientConditionPanel.searchPatient();
-                    } else {
-                        JOptionPane.showMessageDialog(this, "수정 실패");
-                    }
-                } catch (SQLException ex) {
-                    JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-                    ex.printStackTrace();
-                }
+    public void setData(String patientId) throws SQLException {
+        String query = "SELECT * FROM patient WHERE patientid = " + patientId;
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
+
+        rs.next();
+        this.patientId = rs.getInt("patientid");
+        nameField.setText(rs.getString("name"));
+        patientIdField.setText(patientId);
+        identityField.setText(rs.getString("identitynumber"));
+        switch (rs.getString("gender")) {
+            case "남":
+                male.setSelected(true);
+                break;
+            case "여":
+                female.setSelected(true);
+                break;
+        }
+        bloodTypeBox.setSelectedItem(rs.getString("bloodtype") == null ? "선택되지 않음" : rs.getString("bloodtype"));
+        cautionArea.setText(rs.getString("caution"));
+        phoneField.setText(rs.getString("phone"));
+        heightField.setText(rs.getString("height"));
+        weightField.setText(rs.getString("weight"));
+        addressField.setText(rs.getString("address"));
+
+        st.close();
+        rs.close();
+    }
+
+    public void modifyPatient() throws SQLException {
+        if (JOptionPane.showConfirmDialog(this, "수정하시겠습니까?") == 0) {
+            String query = "UPDATE patient SET phone = ?, gender = ?, bloodtype = ?, caution = ?, address = ?, height = ?, weight = ? WHERE patientid = ?";
+            PreparedStatement pstm = conn.prepareStatement(query);
+            pstm.setString(1, phoneField.getText().isEmpty() ? null : phoneField.getText());
+            pstm.setString(2, male.isSelected() ? "남" : "여");
+            pstm.setString(3, bloodTypeBox.getSelectedItem().toString().equals("선택되지 않음") ? null : bloodTypeBox.getSelectedItem().toString());
+            pstm.setString(4, cautionArea.getText().isEmpty() ? null : cautionArea.getText());
+            pstm.setString(5, addressField.getText().isEmpty() ? null : addressField.getText());
+            pstm.setString(6, heightField.getText().isEmpty() ? null : heightField.getText());
+            pstm.setString(7, weightField.getText().isEmpty() ? null : weightField.getText());
+            pstm.setInt(8, patientId);
+
+            if (pstm.executeUpdate() > 0) {
+                JOptionPane.showMessageDialog(this, "수정 성공");
+                patientConditionPanel.searchPatient();
+            } else {
+                JOptionPane.showMessageDialog(this, "수정 실패");
             }
-        } else if (e.getActionCommand().equals("삭제")) {
-            if (JOptionPane.showConfirmDialog(null, nameField.getText() + " 환자를 정말 삭제하시겠습니까?") == 0) {
-                String query = "DELETE FROM patient WHERE patientid = ?";
-                try {
-                    PreparedStatement pstm = conn.prepareStatement(query);
-                    pstm.setInt(1, patientId);
-                    if (pstm.executeUpdate() > 0) {
-                        JOptionPane.showMessageDialog(this, "삭제 성공");
-                        patientConditionPanel.searchPatient();
-                    } else {
-                        JOptionPane.showMessageDialog(this, "삭제 실패");
-                    }
-                } catch (SQLException ex) {
-                    JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-                    ex.printStackTrace();
-                }
+
+            pstm.close();
+        }
+    }
+
+    public void deletePatient() throws SQLException {
+        if (JOptionPane.showConfirmDialog(null, nameField.getText() + " 환자를 정말 삭제하시겠습니까?") == 0) {
+            String query = "DELETE FROM patient WHERE patientid = ?";
+            PreparedStatement pstm = conn.prepareStatement(query);
+            pstm.setInt(1, patientId);
+
+            if (pstm.executeUpdate() > 0) {
+                JOptionPane.showMessageDialog(this, "삭제 성공");
+                patientConditionPanel.searchPatient();
+            } else {
+                JOptionPane.showMessageDialog(this, "삭제 실패");
             }
+
+            pstm.close();
         }
     }
 
@@ -540,7 +553,6 @@ class PatientAddWindow extends JFrame implements ActionListener {
         int height = 30;
         int spacing = 50;
 
-        // Left column components
         JLabel nameLabel = new JLabel("*이름");
         nameLabel.setBounds(xValue, yValue, labelWidth, 30);
         mainPanel.add(nameLabel);
@@ -614,7 +626,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
         mainPanel.add(cautionArea);
 
         xValue += 300;
-        // Right column components
+
         JLabel phoneLabel = new JLabel("연락처");
         phoneLabel.setBounds(xValue, yValue, labelWidth, height);
         mainPanel.add(phoneLabel);
@@ -657,11 +669,17 @@ class PatientAddWindow extends JFrame implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
+            addPatient();
+    }
+
+    public void addPatient() {
         if (JOptionPane.showConfirmDialog(this, nameField.getText() + " 환자를 추가하시겠습니까?") == 0) {
             String query = "INSERT INTO patient(name, phone, identitynumber, caution, address, bloodType, gender, height, weight) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            PreparedStatement pstm = null;
+
             try {
-                PreparedStatement pstm = conn.prepareStatement(query);
+                pstm = conn.prepareStatement(query);
                 if (nameField.getText().isEmpty()) {
                     JOptionPane.showMessageDialog(this, "이름을 입력하세요");
                     nameField.requestFocus();
@@ -674,17 +692,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
                     pstm.setString(3, idField1.getText() + "-" + idField2.getText());
                     pstm.setString(4, cautionArea.getText().isEmpty() ? null : cautionArea.getText());
                     pstm.setString(5, addressField.getText().isEmpty() ? null : addressField.getText());
-                    if (A.isSelected()) {
-                        pstm.setString(6, "A");
-                    } else if (B.isSelected()) {
-                        pstm.setString(6, "B");
-                    } else if (O.isSelected()) {
-                        pstm.setString(6, "O");
-                    } else if (AB.isSelected()) {
-                        pstm.setString(6, "AB");
-                    } else {
-                        pstm.setString(6, null);
-                    }
+                    pstm.setString(6, getBloodType());
                     pstm.setString(7, male.isSelected() ? "남" : "여");
                     pstm.setString(8, heightField.getText().isEmpty() ? null : heightField.getText());
                     pstm.setString(9, weightField.getText().isEmpty() ? null : weightField.getText());
@@ -697,14 +705,30 @@ class PatientAddWindow extends JFrame implements ActionListener {
                         JOptionPane.showMessageDialog(this, "추가 실패");
                     }
                 }
+
+                pstm.close();
             } catch (SQLIntegrityConstraintViolationException ex) {
                 JOptionPane.showMessageDialog(this, "이미 추가된 환자입니다");
-            } catch (SQLException ex) {
-                ex.printStackTrace();
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "키와 몸무게는 숫자를 입력해주세요");
+            } catch (SQLException ex) {
+                System.out.println(ex.getMessage());
             }
         }
+    }
+
+    public String getBloodType() {
+        if (A.isSelected()) {
+            return "A";
+        } else if (B.isSelected()) {
+            return "B";
+        } else if (O.isSelected()) {
+            return "O";
+        } else if (AB.isSelected()) {
+            return "AB";
+        }
+
+        return null;
     }
 }
 

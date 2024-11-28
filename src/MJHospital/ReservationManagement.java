@@ -12,7 +12,6 @@ import java.util.Vector;
 
 public class ReservationManagement extends JPanel {
     Connection conn;
-    Statement st;
     ReservationListPanel reservationListPanel;
     ReservationConditionPanel reservationConditionPanel;
     ReservationDetailPanel reservationDetailsPanel;
@@ -24,14 +23,13 @@ public class ReservationManagement extends JPanel {
         String password = "1234";
         try {
             conn = DriverManager.getConnection(url, userName, password);
-            st = conn.createStatement();
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        reservationDetailsPanel = new ReservationDetailPanel(conn, st);
+        reservationDetailsPanel = new ReservationDetailPanel(conn);
         reservationListPanel = new ReservationListPanel(reservationDetailsPanel);
-        reservationConditionPanel = new ReservationConditionPanel(reservationListPanel, conn, st);
+        reservationConditionPanel = new ReservationConditionPanel(reservationListPanel, conn);
 
         reservationDetailsPanel.setReservationListPanel(reservationListPanel);
         reservationDetailsPanel.setReservationConditionPanel(reservationConditionPanel);
@@ -49,16 +47,14 @@ public class ReservationManagement extends JPanel {
 
 class ReservationConditionPanel extends JPanel implements ActionListener {
     Connection conn;
-    Statement st;
     ReservationListPanel reservationListPanel;
     JTextField patientField, idField, phoneField, doctorField;
     JComboBox<Integer> year, year2, month, month2, day, day2;
 
 
-    public ReservationConditionPanel(ReservationListPanel reservationListPanel, Connection conn, Statement st) {
+    public ReservationConditionPanel(ReservationListPanel reservationListPanel, Connection conn) {
         this.reservationListPanel = reservationListPanel;
         this.conn = conn;
-        this.st = st;
         LocalDate now = LocalDate.now();
         setLayout(null);
         setBorder(BorderFactory.createTitledBorder("예약 조건"));
@@ -172,36 +168,43 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         year2.addActionListener(this);
         month2.addActionListener(this);
 
-        searchReservation();
+        searchButton.doClick();
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getActionCommand().equals("추가")) {
-            new ReservationAddWindow(conn, this).setVisible(true);
-        } else if (e.getSource() == year || e.getSource() == month) {
-            setDate(year, month, day);
-        } else if (e.getSource() == year2 || e.getSource() == month2) {
-            setDate(year2, month2, day2);
-        } else {
-            searchReservation();
+        try {
+            if (e.getActionCommand().equals("추가")) {
+                new ReservationAddWindow(conn, this).setVisible(true);
+            } else if (e.getSource() == year || e.getSource() == month) {
+                setDate(year, month, day);
+            } else if (e.getSource() == year2 || e.getSource() == month2) {
+                setDate(year2, month2, day2);
+            } else {
+                searchReservation();
+            }
+        } catch (SQLException ex) {
+            System.out.println(ex.getMessage());
         }
+
     }
 
     //년도와 월 선택에 따라 일수가 달라지는 기능
     public void setDate(JComboBox<Integer> year, JComboBox<Integer> month, JComboBox<Integer> day) {
         LocalDate date = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), 1);
         LocalDate afterDate = date.plusMonths(1);
+
         Vector<Integer> days = new Vector<>();
         while (date.isBefore(afterDate)) {
             days.add(date.getDayOfMonth());
             date = date.plusDays(1);
         }
+
         day.setModel(new DefaultComboBoxModel<>(days));
     }
 
     //조건에 맞는 예약을 리스트에 띄우는 기능
-    public void searchReservation() {
+    public void searchReservation() throws SQLException {
         String patientName = patientField.getText();
         String id = idField.getText();
         String phone = phoneField.getText();
@@ -209,6 +212,7 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         LocalDate startDay = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), Integer.parseInt(day.getSelectedItem().toString()));
         LocalDate endDay = LocalDate.of(Integer.parseInt(year2.getSelectedItem().toString()), Integer.parseInt(month2.getSelectedItem().toString()), Integer.parseInt(day2.getSelectedItem().toString()));
 
+        //시작 날짜가 끝나는 날짜보다 뒤라면
         if (startDay.isAfter(endDay)) {
             JOptionPane.showMessageDialog(this, "검색하려는 날짜의 범위를 올바르게 지정해주세요");
         } else {
@@ -221,28 +225,25 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
             if (!doctorName.isEmpty()) query += " AND staff.name LIKE '%" + doctorName + "%'";
 
             query += " ORDER BY reservationdate, reservationtime";
-
-            try (ResultSet rs = st.executeQuery(query)) {
-                Vector<Vector<String>> dataVector = new Vector<>();
-                while (rs.next()) {
-                    Vector<String> row = new Vector<>();
-                    row.add(rs.getString("reservationdate"));
-                    row.add(rs.getString("reservationtime"));
-                    row.add(rs.getString("patient.name"));
-                    row.add(rs.getString("staff.name"));
-                    row.add(rs.getInt("isFirst") == 1 ? "초진" : "재진");
-                    dataVector.add(row);
-                }
-                reservationListPanel.setData(dataVector);
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-                System.out.println(ex.getMessage());
-                ex.printStackTrace();
+            Statement st = null;
+            ResultSet rs = null;
+            st = conn.createStatement();
+            rs = st.executeQuery(query);
+            Vector<Vector<String>> dataVector = new Vector<>();
+            while (rs.next()) {
+                Vector<String> row = new Vector<>();
+                row.add(rs.getString("reservationdate"));
+                row.add(rs.getString("reservationtime"));
+                row.add(rs.getString("patient.name"));
+                row.add(rs.getString("staff.name"));
+                row.add(rs.getInt("isFirst") == 1 ? "초진" : "재진");
+                dataVector.add(row);
             }
+            reservationListPanel.setData(dataVector);
+            st.close();
+            rs.close();
         }
     }
-
-
 }
 
 class ReservationListPanel extends JPanel implements MouseListener {
@@ -318,20 +319,18 @@ class ReservationListPanel extends JPanel implements MouseListener {
 }
 
 class ReservationDetailPanel extends JPanel implements ActionListener, MouseListener {
+    Connection conn;
     JTextField patientField, patientIdField, identityField, phoneField, doctorField;
     JTextArea noteArea;
     JComboBox<Integer> year, month, day, hour, minute;
     int reservationId;
-    Connection conn;
-    Statement st;
     ReservationListPanel reservationListPanel;
     ReservationConditionPanel reservationConditionPanel;
     JTable table;
     DefaultTableModel tableModel;
 
-    public ReservationDetailPanel(Connection conn, Statement st) {
+    public ReservationDetailPanel(Connection conn) {
         this.conn = conn;
-        this.st = st;
 
         int xValue = 130;
         int yValue = 60;
@@ -499,29 +498,29 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
     }
 
     //의사 검색 시 이름에 맞는 목록 출력
-    public void searchDoctor(String name) {
+    public void searchDoctor(String name) throws SQLException {
         String query = "SELECT name, major, identitynumber FROM staff WHERE roleid = 1 AND is_active = 1 AND name LIKE '%" + name + "%'";
         Vector<Vector<String>> dataVector = new Vector<>();
 
-        try {
-            Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery(query);
-            while (rs.next()) {
-                Vector<String> row = new Vector<>();
-                row.add(rs.getString("name"));
-                row.add(rs.getString("major"));
-                row.add(rs.getString("identitynumber"));
-                dataVector.add(row);
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-            ex.printStackTrace();
+        Statement st = null;
+        ResultSet rs = null;
+        st = conn.createStatement();
+        rs = st.executeQuery(query);
+        while (rs.next()) {
+            Vector<String> row = new Vector<>();
+            row.add(rs.getString("name"));
+            row.add(rs.getString("major"));
+            row.add(rs.getString("identitynumber"));
+            dataVector.add(row);
         }
 
         tableModel.setRowCount(0);
         for (Vector<String> row : dataVector) {
             tableModel.addRow(row);
         }
+
+        st.close();
+        rs.close();
     }
 
     //상세 정보 세팅 기능
@@ -529,7 +528,11 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
         String query = "SELECT * FROM reservation JOIN patient ON reservation.patientid = patient.patientid JOIN staff ON reservation.staffid = staff.staffid" +
                 " WHERE patient.name = '" + patientName + "' AND staff.name = '" + doctorName + "' AND reservationdate = '" + date + "' AND reservationtime = '" + time + "'";
 
-        try (ResultSet rs = st.executeQuery(query)) {
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            st = conn.createStatement();
+            rs = st.executeQuery(query);
             rs.next();
             reservationId = rs.getInt("reservationid");
             patientField.setText(rs.getString("patient.name"));
@@ -544,9 +547,11 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             hour.setSelectedItem(time.getHour());
             minute.setSelectedItem(time.getMinute());
             tableModel.setRowCount(0);
+
+            st.close();
+            rs.close();
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
     }
 
@@ -594,6 +599,8 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             } else {
                 JOptionPane.showMessageDialog(this, "수정 실패");
             }
+
+            pstm.close();
         }
     }
 
@@ -609,6 +616,8 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             } else {
                 JOptionPane.showMessageDialog(this, "예약 취소 실패");
             }
+
+            pstm.close();
         }
     }
 
@@ -808,24 +817,28 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getActionCommand().equals("추가")) {
-            if (JOptionPane.showConfirmDialog(this, patientField.getText() + " 환자 예약을 추가하시겠습니까?") == 0) {
-                addReservation();
+        try {
+            if (e.getActionCommand().equals("추가")) {
+                if (JOptionPane.showConfirmDialog(this, patientField.getText() + " 환자 예약을 추가하시겠습니까?") == 0) {
+                    addReservation();
+                }
+            } else if (e.getSource() == patientSearchButton || e.getSource() == patientField) {
+                setPatientData(patientField.getText());
+                patientTurn = true;
+            } else if (e.getSource() == doctorSearchButton || e.getSource() == doctorField) {
+                setDoctorData(doctorField.getText());
+                patientTurn = false;
+            } else if (e.getSource() == year || e.getSource() == month) {
+                setDate(year, month, day);
             }
-        } else if (e.getSource() == patientSearchButton || e.getSource() == patientField) {
-            setPatientData(patientField.getText());
-            idField.setText(null);
-            patientTurn = true;
-        } else if (e.getSource() == doctorSearchButton || e.getSource() == doctorField) {
-            setDoctorData(doctorField.getText());
-            patientTurn = false;
-        } else if (e.getSource() == year || e.getSource() == month) {
-            setDate(year, month, day);
+        } catch (SQLException ex) {
+            System.out.println(ex.getMessage());
         }
+
     }
 
     //예약 추가 기능
-    public void addReservation() {
+    public void addReservation() throws SQLException {
         int reservationYear = Integer.parseInt(year.getSelectedItem().toString());
         int reservationMonth = Integer.parseInt(month.getSelectedItem().toString());
         int reservationDay = Integer.parseInt(day.getSelectedItem().toString());
@@ -858,23 +871,17 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         } catch (SQLIntegrityConstraintViolationException ex) {
             JOptionPane.showMessageDialog(this, "해당 날짜와 시간에는 이미 예약이 있습니다");
             ex.printStackTrace();
-        } catch (SQLException ex) {
-            ex.printStackTrace();
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "키와 몸무게는 숫자를 입력해주세요");
         }
     }
 
-    public int isFirst(String patientId) {
+    public int isFirst(String patientId) throws SQLException {
         String query = "SELECT * FROM consultation WHERE patientid = (SELECT patientid FROM patient WHERE identitynumber = '" + patientId + "')";
-        try {
-            Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery(query);
-            if (rs.next()) {
-                return 0;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
+        if (rs.next()) {
+            return 0;
         }
         return 1;
     }
@@ -887,6 +894,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
             JOptionPane.showMessageDialog(this, "주말은 휴무입니다");
             return false;
         }
+
         return true;
     }
 
@@ -903,66 +911,66 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         return true;
     }
 
-    public boolean checkHoliday(LocalDate reservationDate) {
+    public boolean checkHoliday(LocalDate reservationDate) throws SQLException {
         String query = "SELECT off FROM staff WHERE identitynumber = '" + doctorId + "'";
-        try {
-            Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery(query);
-            rs.next();
-            int offDay = Integer.parseInt(rs.getString("off"));
-            if (reservationDate.getDayOfWeek().getValue() == offDay) {
-                JOptionPane.showMessageDialog(null, "그날은 해당 의사분의 휴일입니다");
-                return false;
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
+        rs.next();
+        int offDay = Integer.parseInt(rs.getString("off"));
+        if (reservationDate.getDayOfWeek().getValue() == offDay) {
+            JOptionPane.showMessageDialog(null, "그날은 해당 의사분의 휴일입니다");
+            return false;
         }
+
         return true;
     }
 
-    public void setPatientData(String name) {
+    public void setPatientData(String name) throws SQLException {
+        idField.setText(null);
         String query = "SELECT * FROM patient WHERE name LIKE '%" + name + "%'";
         Vector<Vector<String>> dataVector = new Vector<>();
-        try {
-            Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery(query);
-            while (rs.next()) {
-                Vector<String> row = new Vector<>();
-                row.add(rs.getString("name") + "[" + String.format("%04d", rs.getInt("patientid")) + "]");
-                row.add(rs.getString("gender"));
-                row.add(rs.getString("identitynumber"));
-                dataVector.add(row);
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-            ex.printStackTrace();
+
+        Statement st = null;
+        ResultSet rs = null;
+        st = conn.createStatement();
+        rs = st.executeQuery(query);
+        while (rs.next()) {
+            Vector<String> row = new Vector<>();
+            row.add(rs.getString("name") + "[" + String.format("%04d", rs.getInt("patientid")) + "]");
+            row.add(rs.getString("gender"));
+            row.add(rs.getString("identitynumber"));
+            dataVector.add(row);
         }
 
         String[] columnNames = {"환자 이름", "성별", "주민번호"};
         setTable(columnNames, dataVector);
+
+        st.close();
+        rs.close();
     }
 
     //이름으로 의사 검색 후 table 설정
-    public void setDoctorData(String name) {
+    public void setDoctorData(String name) throws SQLException {
         String query = "SELECT name, major, identitynumber FROM staff WHERE roleid = 1 AND is_active = 1 AND name LIKE '%" + name + "%'";
         Vector<Vector<String>> dataVector = new Vector<>();
-        try {
-            Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery(query);
-            while (rs.next()) {
-                Vector<String> row = new Vector<>();
-                row.add(rs.getString("name"));
-                row.add(rs.getString("major"));
-                row.add(rs.getString("identitynumber"));
-                dataVector.add(row);
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
-            ex.printStackTrace();
+
+        Statement st = null;
+        ResultSet rs = null;
+        st = conn.createStatement();
+        rs = st.executeQuery(query);
+        while (rs.next()) {
+            Vector<String> row = new Vector<>();
+            row.add(rs.getString("name"));
+            row.add(rs.getString("major"));
+            row.add(rs.getString("identitynumber"));
+            dataVector.add(row);
         }
 
         String[] columnNames = {"의사 이름", "전공", "주민번호"};
         setTable(columnNames, dataVector);
+
+        st.close();
+        rs.close();
     }
 
     //table 2개를 같은 자리에 띄워야 하기 때문에 새로운 객체를 생성
