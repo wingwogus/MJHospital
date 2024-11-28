@@ -26,6 +26,7 @@ class Login extends JFrame implements ActionListener {
         setLayout(null);
         getContentPane().setBackground(new Color(200, 200, 200));
 
+        //탑 패널 생성
         topPanel = new JPanel();
         topPanel.setBackground(new Color(150, 150, 150));
         topPanel.setLayout(null);
@@ -43,6 +44,7 @@ class Login extends JFrame implements ActionListener {
         topPanel.add(nameLabel);
         add(topPanel);
 
+        //중앙 패널 생성
         centerPanel = new JPanel();
         centerPanel.setBackground(new Color(200, 200, 200));
         centerPanel.setLayout(null);
@@ -71,6 +73,7 @@ class Login extends JFrame implements ActionListener {
         passwordField.setBounds(240, 290, 200, 25);
         centerPanel.add(passwordField);
 
+        //버튼 패널 생성
         buttonPanel = new JPanel();
         buttonPanel.setBackground(new Color(200, 200, 200));
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
@@ -89,6 +92,7 @@ class Login extends JFrame implements ActionListener {
         passwordField.addActionListener(this);
     }
 
+    //DB 연결
     private void connectToDatabase() {
         try {
             connection = DriverManager.getConnection(
@@ -102,6 +106,7 @@ class Login extends JFrame implements ActionListener {
         }
     }
 
+    //엔터 or 로그인버튼, 취소버튼 클릭 시 이벤트
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == loginButton || e.getSource() == idField || e.getSource() == passwordField) {
             check();
@@ -112,6 +117,7 @@ class Login extends JFrame implements ActionListener {
         }
     }
 
+    //엔터 or 로그인 버튼 클릭 시 아이디 비밀번호 체크
     public void check() {
         String id = idField.getText();
         String password = passwordField.getText();
@@ -122,10 +128,13 @@ class Login extends JFrame implements ActionListener {
             if (resultSet.next()) {
                 int isActive = resultSet.getInt("is_active");
                 String storedPassword = resultSet.getString("password");
+                //활성화 여부 확인
                 if (isActive != 0) {
+                    //비밀번호 확인
                     if (password.equals(storedPassword)) {
                         String name = resultSet.getString("name");
                         String role;
+                        //이름과 직급 저장 후 HospitalUI 클래스 열기
                         if (resultSet.getInt("roleid") == 0) {
                             role = "admin";
                         }
@@ -138,7 +147,9 @@ class Login extends JFrame implements ActionListener {
                         else {
                             role = "오류";
                         }
-                        HospitalUI uiFrame = new HospitalUI(name, role);
+                        statement.close();
+                        resultSet.close();
+                        HospitalUI uiFrame = new HospitalUI(name, role, connection);
                         uiFrame.setVisible(true);
                         this.dispose();
                     } else {

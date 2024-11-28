@@ -2,10 +2,12 @@ package MJHospital;
 
 import javax.swing.*;
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.Statement;
 
 class HospitalUI extends JFrame {
 
-    public HospitalUI(String n, String r) {
+    public HospitalUI(String n, String r, Connection c) {
         setTitle("Main");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 720);
@@ -14,6 +16,8 @@ class HospitalUI extends JFrame {
 
         String name = n;
         String role = r;
+
+        Connection connection = c;
 
         // 상단 패널 생성
         JPanel topPanel = new JPanel();
@@ -27,6 +31,7 @@ class HospitalUI extends JFrame {
         hospitalLabel.setFont(new Font("Serif", Font.BOLD, 30));
         topPanel.add(hospitalLabel, BorderLayout.WEST);
 
+        //유저 정보 패널
         JPanel userPanel = new JPanel();
         userPanel.setBackground(Color.LIGHT_GRAY);
         userPanel.setPreferredSize(new Dimension(200, 40));
@@ -44,7 +49,7 @@ class HospitalUI extends JFrame {
         tabbedPane.addTab("환자 관리", new PatientManagement());
         tabbedPane.addTab("진료 관리", new ConsultationManagement());
         tabbedPane.addTab("예약 관리", new ReservationManagement());
-        tabbedPane.addTab("정보 관리", new StaffManagement());
+        tabbedPane.addTab("정보 관리", new StaffManagement(connection));
 
         // 프레임에 패널 추가
         add(topPanel, BorderLayout.NORTH);

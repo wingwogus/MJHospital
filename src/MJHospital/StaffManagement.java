@@ -6,35 +6,26 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.Vector;
 
 class StaffManagement extends JPanel {
     Connection connection;
-    Statement statement;
-    StaffList staffList = new StaffList(connection, statement);
-    StaffInfo staffInfo = new StaffInfo(connection, statement);
+    StaffList staffList;
+    StaffInfo staffInfo;
 
-    public StaffManagement() {
+    public StaffManagement(Connection c) {
         setLayout(new BorderLayout());
+        connection = c;
+        staffList = new StaffList(connection);
+        staffInfo = new StaffInfo(connection);
         add(staffList, BorderLayout.WEST);
         add(staffInfo, BorderLayout.CENTER);
-        connectToDatabase();
     }
 
-    private void connectToDatabase() {
-        try {
-            connection = DriverManager.getConnection(
-                    "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital",
-                    "hyeni", "0705"
-            );
-            statement = connection.createStatement();
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "DB 연결 실패: " + e.getMessage());
-        }
-    }
 }
 
 class StaffList extends JPanel implements ActionListener {
@@ -43,11 +34,9 @@ class StaffList extends JPanel implements ActionListener {
     DefaultTableModel model;
     JTable table;
     Connection connection;
-    Statement statement;
 
-    public StaffList(Connection c, Statement s) {
+    public StaffList(Connection c) {
         connection = c;
-        statement = s;
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("의료진 검색"));
         setPreferredSize(new Dimension(300, getHeight()));
@@ -71,7 +60,7 @@ class StaffList extends JPanel implements ActionListener {
 
         searchButton.addActionListener(this);
 
-        // 라디오 버튼 패널
+        //라디오 버튼 패널
         JPanel radioPanel = new JPanel(new GridLayout(2, 3));
         radioPanel.setBackground(Color.LIGHT_GRAY);
         ButtonGroup group1 = new ButtonGroup();
@@ -125,12 +114,10 @@ class StaffList extends JPanel implements ActionListener {
 
 class StaffInfo extends JPanel implements ActionListener {
     Connection connection;
-    Statement statement;
-    public StaffInfo(Connection c, Statement s) {
+    public StaffInfo(Connection c) {
         Color backgroundColor = new Color(200, 200, 200);
 
         connection = c;
-        statement = s;
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("의료진 정보"));
@@ -210,7 +197,7 @@ class StaffInfo extends JPanel implements ActionListener {
         phoneNumField.setBounds(xField2, 70, 110, 30);
         majorField.setBounds(xField2, 140, 110, 30);
         offDayField.setBounds(xField2, 210, 110, 30);
-        addressScroll.setBounds(570, 280, 220, 110);
+        addressScroll.setBounds(570, 280, 200, 105);
 
         centerPanel.add(nameLabel);
         centerPanel.add(nameField);
@@ -254,19 +241,22 @@ class StaffInfo extends JPanel implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         String s = e.getActionCommand();
         if (s.equals("추가")) {
-            AddStaff addStaff = new AddStaff(connection, statement);
+            AddStaff addStaff = new AddStaff(connection);
             addStaff.setVisible(true);
         }
     }
 
 }
 
-class AddStaff extends JFrame {
+class AddStaff extends JFrame implements ActionListener{
+    JTextField nameField, IDField, passwdField, idNumField, phoneNumField, majorField;
+    JTextArea addressArea;
+    JButton addButton, cancelButton;
+    JComboBox roleBox, offDayBox;
+
     Connection connection;
-    Statement statement;
-    public AddStaff(Connection c, Statement s) {
+    public AddStaff(Connection c) {
         connection = c;
-        statement = s;
 
         setTitle("의료진 추가");
         setSize(500, 500);
@@ -289,31 +279,38 @@ class AddStaff extends JFrame {
         mainPanel.setBackground(new Color(200, 200, 200));
 
         //메인패널 컴포넌트
-        JLabel nameLabel = new JLabel("이름");
+        JLabel nameLabel = new JLabel("이름*");
         nameLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
-        JLabel IDLabel = new JLabel("ID");
+        JLabel IDLabel = new JLabel("ID*");
         IDLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
-        JLabel passwdLabel = new JLabel("PASSWORD");
+        JLabel passwdLabel = new JLabel("PASSWORD*");
         passwdLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
-        JLabel idNumLabel = new JLabel("주민번호");
+        JLabel idNumLabel = new JLabel("주민번호*");
         idNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel phoneNumLabel = new JLabel("연락처");
         phoneNumLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
-        JLabel majorLabel = new JLabel("전공");
+        JLabel majorLabel = new JLabel("전공*");
         majorLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel offDayLabel = new JLabel("휴무일");
         offDayLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
         JLabel addressLabel = new JLabel("주소");
         addressLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
+        JLabel titleLabel = new JLabel("직급*");
+        titleLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 15));
 
-        JTextField nameField = new JTextField();
-        JTextField IDField = new JTextField();
-        JTextField passwdField = new JTextField();
-        JTextField idNumField = new JTextField();
-        JTextField phoneNumField = new JTextField();
-        JTextField majorField = new JTextField();
-        JTextField offDayField = new JTextField();
-        JTextArea addressArea = new JTextArea();
+        nameField = new JTextField();
+        IDField = new JTextField();
+        passwdField = new JTextField();
+        idNumField = new JTextField();
+        phoneNumField = new JTextField();
+        majorField = new JTextField();
+        addressArea = new JTextArea();
+
+        String[] offStr = {"", "월", "화", "수", "목", "금", "토"};
+        offDayBox = new JComboBox(offStr);
+
+        String[] roleStr = {"의사", "간호사"};
+        roleBox = new JComboBox(roleStr);
 
         addressArea.setLineWrap(true);
         JScrollPane addressScroll = new JScrollPane(addressArea);
@@ -328,6 +325,7 @@ class AddStaff extends JFrame {
         IDLabel.setBounds(xLabel1, 120, 100, 30);
         passwdLabel.setBounds(xLabel1, 190, 150, 30);
         idNumLabel.setBounds(xLabel1, 260, 100, 30);
+        titleLabel.setBounds(xLabel1, 330, 100, 30);
         phoneNumLabel.setBounds(xLabel2, 50, 100, 30);
         majorLabel.setBounds(xLabel2, 120, 100, 30);
         offDayLabel.setBounds(xLabel2, 190, 100, 30);
@@ -338,10 +336,11 @@ class AddStaff extends JFrame {
         IDField.setBounds(xField1, 120, 110, 30);
         passwdField.setBounds(xField1, 190, 110, 30);
         idNumField.setBounds(xField1, 260, 110, 30);
+        roleBox.setBounds(xField1, 330, 110, 30);
         phoneNumField.setBounds(xField2, 50, 110, 30);
         majorField.setBounds(xField2, 120, 110, 30);
-        offDayField.setBounds(xField2, 190, 110, 30);
-        addressScroll.setBounds(290, 260, 170, 50);
+        offDayBox.setBounds(xField2, 190, 110, 30);
+        addressScroll.setBounds(290, 260, 160, 80);
 
         mainPanel.add(nameLabel);
         mainPanel.add(nameField);
@@ -351,27 +350,32 @@ class AddStaff extends JFrame {
         mainPanel.add(passwdField);
         mainPanel.add(idNumLabel);
         mainPanel.add(idNumField);
+        mainPanel.add(titleLabel);
+        mainPanel.add(roleBox);
         mainPanel.add(phoneNumLabel);
         mainPanel.add(phoneNumField);
         mainPanel.add(majorLabel);
         mainPanel.add(majorField);
         mainPanel.add(offDayLabel);
-        mainPanel.add(offDayField);
+        mainPanel.add(offDayBox);
         mainPanel.add(addressLabel);
         mainPanel.add(addressScroll);
 
         //버튼 패널
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(null);
-        buttonPanel.setPreferredSize(new Dimension(getWidth(), 70));
+        buttonPanel.setPreferredSize(new Dimension(getWidth(), 50));
         buttonPanel.setBackground(new Color(200, 200, 200));
 
         //버튼 컴포넌트
-        JButton addButton = new JButton("추가");
-        JButton cancelButton = new JButton("취소");
+        addButton = new JButton("추가");
+        cancelButton = new JButton("취소");
 
-        addButton.setBounds(150, 0, 80, 30);
-        cancelButton.setBounds(250, 0, 80, 30);
+        addButton.addActionListener(this);
+        cancelButton.addActionListener(this);
+
+        addButton.setBounds(280, 0, 80, 30);
+        cancelButton.setBounds(380, 0, 80, 30);
 
         buttonPanel.add(addButton);
         buttonPanel.add(cancelButton);
@@ -379,6 +383,134 @@ class AddStaff extends JFrame {
         add(topPanel, BorderLayout.NORTH);
         add(mainPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        try {
+            if (e.getSource() == addButton) {
+                addStaff();
+                dispose();
+            }
+            else if (e.getSource() == cancelButton) {
+                dispose();
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + ex.getMessage(),
+                "오류", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(),
+                "입력 오류", JOptionPane.WARNING_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "예상치 못한 오류: " + ex.getMessage(),
+                "오류", JOptionPane.ERROR_MESSAGE);
+        }
+
+    }
+
+    public void addStaff() throws SQLException, IllegalArgumentException{
+        Statement statement;
+        ResultSet resultSet;
+
+        String selectQuery = "SELECT staffID, identitynumber FROM staff";
+
+        String getName, getID, getPasswd, getIDNum, getRole, getPhone, getMajor, getOff, getAddress;
+        getName = nameField.getText();
+        getID = IDField.getText();
+        getPasswd = passwdField.getText();
+        getIDNum = idNumField.getText();
+        getRole = roleBox.getSelectedItem().toString();
+        getPhone = phoneNumField.getText();
+        getMajor = majorField.getText();
+        getOff = offDayBox.getSelectedItem().toString();
+        getAddress = addressArea.getText();
+
+        statement = connection.createStatement();
+        resultSet = statement.executeQuery(selectQuery);
+
+        // null 체크
+        if (Arrays.asList(getName, getID, getPasswd, getIDNum, getMajor).contains("")) {
+            throw new IllegalArgumentException("필수 입력 항목이 누락되었습니다.");
+        }
+
+        //주민번호 형식 확인
+        if (!getIDNum.contains("-")) {
+            throw new IllegalArgumentException("주민번호는 -를 포함한 14자리 정수를 입력해주세요.");
+        }
+        String[] splitNum = getIDNum.split("-");
+        if(splitNum.length != 2) {
+            throw new IllegalArgumentException("-는 한번만 입력하세요.");
+        }
+        else if(!is_Ok(splitNum[0], 6) || !is_Ok(splitNum[1], 7)) {
+            throw new IllegalArgumentException("주민번호의 형식이 올바르지 않습니다.");
+        }
+
+        // 중복 ID, 주민번호 발견 시 예외처리
+        while (resultSet.next()) {
+            if (getID.equals(resultSet.getString("staffID"))) {
+                throw new IllegalArgumentException("이미 존재하는 아이디입니다.");
+            }
+            else if (getIDNum.equals(resultSet.getString("identitynumber"))) {
+                throw new IllegalArgumentException("이미 등록된 의료진입니다.");
+            }
+        }
+
+        //INSERT 쿼리문 작성 및 실행
+        int roleID;
+        String offDay;
+        if(getRole.equals("의사")) {
+            roleID = 1;
+        }
+        else {
+            roleID = 2;
+        }
+        offDay = offCode(getOff);
+        String insertQuery = "Insert INTO staff values ('" + getID + "', '" + getPasswd + "', 1, '"
+                + roleID + "', '" + getName + "', '" + offDay + "', '" + getPhone + "', '" + getIDNum + "', '"
+                + getMajor + "', '" + getAddress + "')";
+        statement.executeUpdate(insertQuery);
+        JOptionPane.showMessageDialog(this, "의료진이 성공적으로 추가되었습니다.", "확인", JOptionPane.INFORMATION_MESSAGE);
+        statement.close();
+        resultSet.close();
+    }
+
+    //주민번호 형식 확인 메소드
+    static boolean is_Ok(String str, int length) {
+        if (str.length() != length) {
+            return false;
+        }
+        try {
+            Integer.parseInt(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    //콤보박스 값 토대로 휴무일 코드 반환
+    static String offCode(String off) {
+        switch (off) {
+            case "월" -> {
+                return "1";
+            }
+            case "화" -> {
+                return "2";
+            }
+            case "수" -> {
+                return "3";
+            }
+            case "목" -> {
+                return "4";
+            }
+            case "금" -> {
+                return "5";
+            }
+            case "토" -> {
+                return "6";
+            }
+        }
+        return null;
     }
 }
 
