@@ -51,7 +51,6 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
     JTextField patientField, idField, phoneField, doctorField;
     JComboBox<Integer> year, year2, month, month2, day, day2;
 
-
     public ReservationConditionPanel(ReservationListPanel reservationListPanel, Connection conn) {
         this.reservationListPanel = reservationListPanel;
         this.conn = conn;
@@ -104,7 +103,6 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
 
         xValue += labelWidth + fieldWidth + spacing;
 
-        //날짜 설정
         Integer[] years = new Integer[100];
 
         for (int i = 0; i < 100; i++) {
@@ -229,6 +227,8 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
             ResultSet rs = null;
             st = conn.createStatement();
             rs = st.executeQuery(query);
+
+            //새로운 행 만들어서 삽입
             Vector<Vector<String>> dataVector = new Vector<>();
             while (rs.next()) {
                 Vector<String> row = new Vector<>();
@@ -466,7 +466,8 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
         cautionLabel.setBounds(xValue, yValue + 2 * spacing, labelWidth, height);
         add(cautionLabel);
 
-        noteArea = new JTextArea(15, 15);
+        noteArea = new JTextArea();
+        noteArea.setLineWrap(true);
         noteArea.setBounds(xValue + labelWidth, yValue + 2 * spacing, fieldWidth, 3 * height);
         add(noteArea);
 
@@ -621,15 +622,14 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
         }
     }
 
-    public void setReservationConditionPanel(ReservationConditionPanel reservationConditionPanel) {
-        this.reservationConditionPanel = reservationConditionPanel;
-    }
-
     @Override
     public void mouseClicked(MouseEvent e) {
         int row = table.getSelectedRow();
         doctorField.setText(tableModel.getValueAt(row, 0).toString());
+    }
 
+    public void setReservationConditionPanel(ReservationConditionPanel reservationConditionPanel) {
+        this.reservationConditionPanel = reservationConditionPanel;
     }
 
     @Override
@@ -834,7 +834,6 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         } catch (SQLException ex) {
             System.out.println(ex.getMessage());
         }
-
     }
 
     //예약 추가 기능
@@ -876,6 +875,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         }
     }
 
+    //재진 여부 판단
     public int isFirst(String patientId) throws SQLException {
         String query = "SELECT * FROM consultation WHERE patientid = (SELECT patientid FROM patient WHERE identitynumber = '" + patientId + "')";
         Statement st = conn.createStatement();
@@ -883,21 +883,24 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         if (rs.next()) {
             return 0;
         }
+
         return 1;
     }
 
+    //날짜 체크 및 공휴일 체크
     public boolean checkDate(LocalDate reservationDate) {
         if (LocalDate.now().isAfter(reservationDate)) {
             JOptionPane.showMessageDialog(this, "오늘 이후의 날짜를 선택해주세요");
             return false;
-        } else if (reservationDate.getDayOfWeek() == DayOfWeek.SATURDAY || reservationDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            JOptionPane.showMessageDialog(this, "주말은 휴무입니다");
+        } else if (reservationDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            JOptionPane.showMessageDialog(this, "일요일은 휴무입니다");
             return false;
         }
 
         return true;
     }
 
+    //환자 필드, 의사 필드 빈 칸 체크
     public boolean checkField() {
         if (patientField.getText().isEmpty()) {
             JOptionPane.showMessageDialog(this, "환자 이름을 입력하세요");
@@ -911,6 +914,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         return true;
     }
 
+    //의사 공휴일 체크
     public boolean checkHoliday(LocalDate reservationDate) throws SQLException {
         String query = "SELECT off FROM staff WHERE identitynumber = '" + doctorId + "'";
         Statement st = conn.createStatement();
@@ -925,6 +929,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         return true;
     }
 
+    //이름으로 환자 검색 후 table 설정
     public void setPatientData(String name) throws SQLException {
         idField.setText(null);
         String query = "SELECT * FROM patient WHERE name LIKE '%" + name + "%'";

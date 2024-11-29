@@ -58,6 +58,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         setLayout(null);
         setBorder(BorderFactory.createTitledBorder("환자 조건"));
         setPreferredSize(new Dimension(1000, 150));
+
         int xValue = 150;
         int yValue = 25;
         int labelWidth = 60;
@@ -182,6 +183,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         }
     }
 
+    //환자 찾기
     public void searchPatient() throws SQLException {
         String query = "SELECT * FROM patient WHERE 1=1";
 
@@ -376,6 +378,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         add(cautionLabel);
 
         cautionArea = new JTextArea(15, 15);
+        cautionArea.setLineWrap(true);
         cautionArea.setBounds(xValue + labelWidth, yValue + 4 * spacing, fieldWidth, 3 * height);
         add(cautionArea);
 
@@ -621,7 +624,8 @@ class PatientAddWindow extends JFrame implements ActionListener {
         cautionLabel.setBounds(xValue, yValue + 4 * spacing, labelWidth, height);
         mainPanel.add(cautionLabel);
 
-        cautionArea = new JTextArea(15, 13);
+        cautionArea = new JTextArea();
+        cautionArea.setLineWrap(true);
         cautionArea.setBounds(xValue + labelWidth, yValue + 4 * spacing, fieldWidth, height * 3);
         mainPanel.add(cautionArea);
 
@@ -672,21 +676,17 @@ class PatientAddWindow extends JFrame implements ActionListener {
             addPatient();
     }
 
+    //환자 추가 로직
     public void addPatient() {
         if (JOptionPane.showConfirmDialog(this, nameField.getText() + " 환자를 추가하시겠습니까?") == 0) {
             String query = "INSERT INTO patient(name, phone, identitynumber, caution, address, bloodType, gender, height, weight) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
             PreparedStatement pstm = null;
 
             try {
                 pstm = conn.prepareStatement(query);
-                if (nameField.getText().isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "이름을 입력하세요");
-                    nameField.requestFocus();
-                } else if (idField1.getText().length() != 6 || idField2.getText().length() != 7) {
-                    JOptionPane.showMessageDialog(this, "올바른 주민번호를 입력해주세요");
-                    idField1.requestFocus();
-                } else {
+                if (checkName() && checkLength()) {
                     pstm.setString(1, nameField.getText());
                     pstm.setString(2, phoneField.getText().isEmpty() ? null : phoneField.getText());
                     pstm.setString(3, idField1.getText() + "-" + idField2.getText());
@@ -717,6 +717,26 @@ class PatientAddWindow extends JFrame implements ActionListener {
         }
     }
 
+    public boolean checkLength() {
+        if (idField1.getText().length() != 6 || idField2.getText().length() != 7) {
+            JOptionPane.showMessageDialog(this, "올바른 주민번호를 입력해주세요");
+            idField1.requestFocus();
+            return false;
+        }
+
+        return true;
+    }
+
+    public boolean checkName() {
+        if (nameField.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "이름을 입력하세요");
+            nameField.requestFocus();
+            return false;
+        }
+
+        return true;
+    }
+    //혈액형 가져오기
     public String getBloodType() {
         if (A.isSelected()) {
             return "A";
