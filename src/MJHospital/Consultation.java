@@ -4,15 +4,14 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.Vector;
 
 public class Consultation extends JPanel {
     private JList<String> patientList;
     private DefaultListModel<String> patientListModel;
-    private DefaultTableModel recordTableModel;
-    private JTable recordTable;
-    private JComboBox<String> diseaseComboBox;
-    private JTextArea symptomsArea, doctorNoteArea, prescriptionArea;
+    private JComboBox<String> datePickComboBox, diseaseComboBox;
+    private JTextArea symptomsArea, doctorNoteArea, prescriptionArea, diseaseArea, NsymptomsArea, NdoctorNoteArea, NprescriptionArea;
 
     private Connection connection;
     public String currentStaffId; // 로그인한 사용자 ID
@@ -29,23 +28,45 @@ public class Consultation extends JPanel {
 
         // 좌측 p1 : 환자 리스트
         JPanel leftPanel = new JPanel(new BorderLayout());
-        leftPanel.setPreferredSize(new Dimension(200, 0));
+        leftPanel.setPreferredSize(new Dimension(300, 0));
         leftPanel.setBorder(BorderFactory.createTitledBorder("환자 목록"));
         patientListModel = new DefaultListModel<>();
         patientList = new JList<>(patientListModel);
         patientList.setCellRenderer(new PatientListCellRenderer());
         loadPatientList();
-        patientList.addListSelectionListener(e -> loadPatientRecords());
+        patientList.addListSelectionListener(e -> loadPatientDateRecords());
         leftPanel.add(new JScrollPane(patientList), BorderLayout.CENTER);
         add(leftPanel, BorderLayout.WEST);
+
 
         // 중앙 p2 : 진료 기록
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setBorder(BorderFactory.createTitledBorder("진료 기록"));
-        recordTableModel = new DefaultTableModel(new String[]{"날짜", "질병명", "증상", "의사소견", "처방"}, 0);
-        recordTable = new JTable(recordTableModel);
-        centerPanel.add(new JScrollPane(recordTable), BorderLayout.CENTER);
+
+        //날짜 선택
+        JPanel datePickPanel = new JPanel(new BorderLayout());
+        datePickPanel.setBorder(BorderFactory.createTitledBorder("날짜 선택"));
+        datePickComboBox = new JComboBox<>();
+        datePickComboBox.addActionListener(e -> loadPatientConsultationRecord());
+        datePickPanel.add(datePickComboBox, BorderLayout.CENTER);
+
+        //진료 기록 출력
+        diseaseArea = new JTextArea(2, 20);
+        NsymptomsArea = new JTextArea(4, 20);
+        NdoctorNoteArea = new JTextArea(4, 20);
+        NprescriptionArea = new JTextArea(4, 20);
+
+        JPanel PrintPanel = new JPanel();
+        PrintPanel.setLayout(new BoxLayout(PrintPanel, BoxLayout.Y_AXIS));
+        PrintPanel.add(createLabeledPanel("병명 :", diseaseArea));
+        PrintPanel.add(createLabeledPanel("증상 :", NsymptomsArea));
+        PrintPanel.add(createLabeledPanel("의사 소견 :", NdoctorNoteArea));
+        PrintPanel.add(createLabeledPanel("처방 :", NprescriptionArea));
+
+        centerPanel.add(datePickPanel, BorderLayout.NORTH);
+        centerPanel.add(new JScrollPane(PrintPanel), BorderLayout.CENTER);
         add(centerPanel, BorderLayout.CENTER);
+
 
         // 우측 p3 : 진료 작성 창
         JPanel rightPanel = new JPanel(new BorderLayout());
@@ -97,14 +118,22 @@ public class Consultation extends JPanel {
     private void loadPatientList() {
         try {
             patientListModel.clear();
+
+            LocalDate today = LocalDate.now();
+
             String query = """
-                        SELECT r.patientid, r.reservationtime, p.name, r.note, r.status
+                        SELECT r.patientid, r.reservationtime, p.name, r.note, r.status, r.reservationdate
                         FROM reservation r
                         JOIN patient p ON r.patientid = p.patientid
+                        WHERE r.reservationdate = ? 
                         ORDER BY r.reservationtime ASC
                     """;
-            Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery(query);
+
+            PreparedStatement pstmt = connection.prepareStatement(query);
+            pstmt.setString(1, today.toString());
+
+            ResultSet rs = pstmt.executeQuery();
+
             while (rs.next()) {
                 String entry = rs.getInt("patientid") + " - " + rs.getString("name") +
                         " (" + rs.getString("reservationtime") + ", " + rs.getString("note") + ")";
@@ -115,37 +144,79 @@ public class Consultation extends JPanel {
         }
     }
 
-    private void loadPatientRecords() {
+    private void loadPatientDateRecords() {
         try {
-            recordTableModel.setRowCount(0); // 기존 데이터 초기화
+            datePickComboBox.removeAllItems(); // 기존 데이터 초기화
             String selected = patientList.getSelectedValue();
             if (selected == null) return;
 
             int patientId = Integer.parseInt(selected.split(" - ")[0]);
+
             String query = """
-                        SELECT c.consultationdate, d.diseasename, c.diagnosis, c.opinion, c.prescription
-                        FROM consultation c
-                        JOIN disease d ON c.diseaseid = d.diseaseid
-                        WHERE c.patientid = ?
-                        ORDER BY c.consultationdate ASC
-                    """;
+                SELECT DISTINCT c.consultationdate
+                FROM consultation c
+                WHERE c.patientid = ?
+                ORDER BY c.consultationdate DESC
+            """;
+
             PreparedStatement pstmt = connection.prepareStatement(query);
             pstmt.setInt(1, patientId);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                recordTableModel.addRow(new Object[]{
-                        rs.getDate("consultationdate"),
-                        rs.getString("diseasename"),
-                        rs.getString("diagnosis"),
-                        rs.getString("opinion"),
-                        rs.getString("prescription")
-                });
+                datePickComboBox.addItem(rs.getDate("consultationdate").toString());
+            }
+
+            // 날짜가 없을 경우 알림
+            if (datePickComboBox.getItemCount() == 0) {
+                JOptionPane.showMessageDialog(this, "해당 환자의 진료 날짜가 없습니다.");
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "진료 날짜 로드 실패: " + e.getMessage());
+        }
+    }
+
+
+    private void loadPatientConsultationRecord() {
+        try {
+            String selected = patientList.getSelectedValue();
+            if (selected == null) return;
+
+            String selectedDate = (String) datePickComboBox.getSelectedItem();
+            if (selectedDate == null) return;
+
+            int patientId = Integer.parseInt(selected.split(" - ")[0]);
+
+            String query = """
+                SELECT d.diseasename, c.diagnosis, c.opinion, c.prescription
+                FROM consultation c
+                JOIN disease d ON c.diseaseid = d.diseaseid
+                WHERE c.patientid = ? AND c.consultationdate = ?
+            """;
+
+            PreparedStatement pstmt = connection.prepareStatement(query);
+            pstmt.setInt(1, patientId);
+            pstmt.setDate(2, java.sql.Date.valueOf(selectedDate));
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                diseaseArea.setText(rs.getString("diseasename"));
+                NsymptomsArea.setText(rs.getString("diagnosis"));
+                NdoctorNoteArea.setText(rs.getString("opinion"));
+                NprescriptionArea.setText(rs.getString("prescription"));
+            } else {
+                diseaseArea.setText("");
+                NsymptomsArea.setText("");
+                NdoctorNoteArea.setText("");
+                NprescriptionArea.setText("");
+                JOptionPane.showMessageDialog(this, "해당 날짜에 진료 기록이 없습니다.");
             }
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "진료 기록 로드 실패: " + e.getMessage());
         }
     }
+
 
     private void loadDiseaseList() {
         try {
@@ -230,7 +301,7 @@ public class Consultation extends JPanel {
     }
 
     public static void main(String[] args) {
-        String staffId = "doctor";
+        String staffId = "ssh";
         SwingUtilities.invokeLater(() -> new JFrame() {{
             setTitle("Consultation");
             setContentPane(new Consultation(staffId));
