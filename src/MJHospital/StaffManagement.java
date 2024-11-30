@@ -5,6 +5,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,7 +35,7 @@ class StaffManagement extends JPanel {
 
 }
 
-class StaffList extends JPanel implements ActionListener {
+class StaffList extends JPanel implements ActionListener, MouseListener {
     Connection connection;
 
     String id, role;
@@ -113,6 +115,7 @@ class StaffList extends JPanel implements ActionListener {
             radioBtnA.setEnabled(false);
             radioBtnD.setEnabled(false);
             radioBtnN.setEnabled(false);
+            radioBtnAA.setEnabled(false);
             radioBtnO.setEnabled(false);
             radioBtnX.setEnabled(false);
         }
@@ -132,6 +135,7 @@ class StaffList extends JPanel implements ActionListener {
         model = new DefaultTableModel(data, columnNames);
         table = new JTable(model);
         table.getColumnModel().getColumn(0).setPreferredWidth(20);
+        table.addMouseListener(this);
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -165,7 +169,8 @@ class StaffList extends JPanel implements ActionListener {
         setTable(selectQuery);
     }
 
-    public String getText(ButtonGroup group, ButtonModel selectedModel) {
+    //라디오 버튼에서 텍스트 가져오기
+    private String getText(ButtonGroup group, ButtonModel selectedModel) {
         if (selectedModel != null) {
             for (Enumeration<AbstractButton> buttons = group.getElements(); buttons.hasMoreElements();) {
                 AbstractButton button = buttons.nextElement();
@@ -177,7 +182,8 @@ class StaffList extends JPanel implements ActionListener {
         return null;
     }
 
-    public String setQuery(String radioActive, String radioRole, String getName) {
+    //쿼리문 만들기
+    private String setQuery(String radioActive, String radioRole, String getName) {
         String query = "SELECT s.staffid, r.rolename, s.name, s.is_active FROM staff s INNER JOIN role r ON s.roleid = r.roleid  WHERE s.name LIKE '%" + getName + "%'";
         if (radioActive.equals("재직중")) {
             query += " AND s.is_active = 1";
@@ -195,7 +201,8 @@ class StaffList extends JPanel implements ActionListener {
         return query;
     }
 
-    public void setTable(String selectQuery) throws SQLException {
+    //테이블 생성
+    private void setTable(String selectQuery) throws SQLException {
         Statement statement;
         ResultSet resultSet;
         statement = connection.createStatement();
@@ -219,17 +226,43 @@ class StaffList extends JPanel implements ActionListener {
 
         table.setModel(new DefaultTableModel(data, columnNames));
         table.updateUI();
+
+        statement.close();
+        resultSet.close();
     }
+
+    //테이블 클릭시 staffInfo의 setInfo 실행
+    public void mouseClicked(MouseEvent e) {
+        int row = table.getSelectedRow();
+        String userID = (String) model.getValueAt(row, 0);
+        try {
+            StaffInfo.setInfo(userID);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + ex.getMessage(),
+                    "오류", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public void mousePressed(MouseEvent e) {}
+    public void mouseReleased(MouseEvent e) {}
+    public void mouseEntered(MouseEvent e) {}
+    public void mouseExited(MouseEvent e) {}
 }
 
 class StaffInfo extends JPanel implements ActionListener {
-    Connection connection;
+    static Connection connection;
 
     String id, role;
 
-    JTextField nameField, IDField, passwdField, idNumField, titleField, phoneNumField, majorField, offDayField;
-    JTextArea addressArea;
-    JButton addButton, editButton, inactivationButton;
+    static JTextField nameField, IDField, passwdField, idNumField, titleField, phoneNumField, majorField;
+    static JComboBox offDayBox;
+    static JTextArea addressArea;
+    JButton addButton, editButton;
+    static JButton inactivationButton;
+
+    static {
+        inactivationButton = new JButton("비활성화"); //이유는 모르겠는데 초기화가 안된대서 초기화
+    }
 
     public StaffInfo(Connection c, String i, String r) {
         Color backgroundColor = new Color(200, 200, 200);
@@ -256,6 +289,7 @@ class StaffInfo extends JPanel implements ActionListener {
         JPanel centerPanel = new JPanel(null);
         centerPanel.setBackground(backgroundColor);
 
+        //중앙 패널 컴포넌트 생성
         JLabel nameLabel = new JLabel("이름");
         nameLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
         JLabel IDLabel = new JLabel("ID");
@@ -286,10 +320,19 @@ class StaffInfo extends JPanel implements ActionListener {
         titleField.setEditable(false);
         phoneNumField = new JTextField();
         majorField = new JTextField();
-        offDayField = new JTextField();
+        String[] offStr = {"", "월", "화", "수", "목", "금", "토"};
+        offDayBox = new JComboBox(offStr);
         addressArea = new JTextArea();
         addressArea.setLineWrap(true);
         JScrollPane addressScroll = new JScrollPane(addressArea);
+
+        //텍스트필드 채워넣기
+        try {
+            setInfo();
+        }catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + e.getMessage(),
+                    "오류", JOptionPane.ERROR_MESSAGE);
+        }
 
         int xLabel1 = 200;
         int xField1 = 350;
@@ -316,7 +359,7 @@ class StaffInfo extends JPanel implements ActionListener {
         titleField.setBounds(xField1, 350, 110, 30);
         phoneNumField.setBounds(xField2, 70, 110, 30);
         majorField.setBounds(xField2, 140, 110, 30);
-        offDayField.setBounds(xField2, 210, 110, 30);
+        offDayBox.setBounds(xField2, 210, 110, 30);
         addressScroll.setBounds(570, 280, 200, 105);
 
         centerPanel.add(nameLabel);
@@ -334,7 +377,7 @@ class StaffInfo extends JPanel implements ActionListener {
         centerPanel.add(majorLabel);
         centerPanel.add(majorField);
         centerPanel.add(offDayLabel);
-        centerPanel.add(offDayField);
+        centerPanel.add(offDayBox);
         centerPanel.add(addressLabel);
         centerPanel.add(addressScroll);
 
@@ -343,11 +386,16 @@ class StaffInfo extends JPanel implements ActionListener {
         buttonPanel.setBackground(backgroundColor);
         addButton = new JButton("추가");
         editButton = new JButton("수정");
-        inactivationButton = new JButton("비활성화");
 
         buttonPanel.add(addButton);
         buttonPanel.add(editButton);
         buttonPanel.add(inactivationButton);
+
+        //admin이 아니라면 컴포넌트 비활성화
+        if (!role.equals("admin")){
+            addButton.setEnabled(false);
+            inactivationButton.setEnabled(false);
+        }
 
         addButton.addActionListener(this);
         editButton.addActionListener(this);
@@ -364,11 +412,161 @@ class StaffInfo extends JPanel implements ActionListener {
             addStaff.setVisible(true);
         }
         else if (e.getSource() == editButton) {
-
+            try {
+                editInfo();
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + ex.getMessage(),
+                        "오류", JOptionPane.ERROR_MESSAGE);
+            }
         }
         else if (e.getSource() == inactivationButton) {
-
+            try {
+                inactivationUser();
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + ex.getMessage(),
+                        "오류", JOptionPane.ERROR_MESSAGE);
+            }
         }
+    }
+
+    //활성화/비활성화 버튼 클릭시 실행
+    public void inactivationUser() throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(activeQuery())) { //try with resources사용 자동으로 자원을 닫아줌
+            if(resultSet.next()) {
+                if (resultSet.getString("is_active").equals("1")) {
+                    int rowAffected = statement.executeUpdate(buildUpdateActivationQuery(1));
+                    if (rowAffected > 0) { //계정이 비활성화 되었다면 메세지 출력
+                        JOptionPane.showMessageDialog(this, "계정이 비활성화 되었습니다.", "성공", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }
+                else {
+                    int rowAffected = statement.executeUpdate(buildUpdateActivationQuery(0));
+                    if (rowAffected > 0) { //계정이 활성화 되었다면 메세지 출력
+                        JOptionPane.showMessageDialog(this, "계정이 활성화 되었습니다.", "성공", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }
+            }
+        }
+
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(activeQuery())) {
+            if(resultSet.next()) {
+                editBtn(resultSet); //활성화, 비활성화 버튼 수정
+            }
+        }
+    }
+
+    //활성화/비활성화 상태 확인
+    public String activeQuery() {
+        String getID = IDField.getText();
+        return "SELECT is_active FROM staff WHERE staffid = '" + getID + "'";
+    }
+    //활성화/비활성화 상태 수정 쿼리문 작성
+    public String buildUpdateActivationQuery(int actState) {
+        String getID = IDField.getText();
+        if (actState == 0) {
+            return "UPDATE staff SET is_active = 1 WHERE staffid = '" + getID + "'";
+        }
+        else {
+            return "UPDATE staff SET is_active = 0 WHERE staffid = '" + getID + "'";
+        }
+    }
+
+    //수정 버튼 클릭시 실행
+    public void editInfo() throws SQLException {
+        try (Statement statement = connection.createStatement()) { //try with resources사용 자동으로 자원을 닫아줌
+            int rowAffected = statement.executeUpdate(buildUpdateQuery());
+            if (rowAffected > 0) { //수정된 정보가 있다면 메세지 출력
+                JOptionPane.showMessageDialog(this, "정보가 성공적으로 수정되었습니다.", "성공", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "수정할 정보가 없습니다.", "알림", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+
+    //UPDATE 쿼리문 작성
+    public String buildUpdateQuery() {
+        String getID = IDField.getText();
+        String getPasswd = passwdField.getText();
+        String getPhone = phoneNumField.getText();
+        String getMajor = majorField.getText();
+        String getOff = offDayBox.getSelectedItem().toString();
+        String getAddress = addressArea.getText();
+        int offDay = AddStaff.offCode(getOff);
+        if (offDay == 0) {
+            return "UPDATE staff SET password = '" + getPasswd + "', phone = '" + getPhone + "', major = '" + getMajor
+                    + "', off = null, address = '" + getAddress + "' WHERE staffid = '" + getID + "'";
+        }
+        else {
+            return "UPDATE staff SET password = '" + getPasswd + "', phone = '" + getPhone + "', major = '" + getMajor
+                    + "', off = '" + offDay + "', address = '" + getAddress + "' WHERE staffid = '" + getID + "'";
+        }
+    }
+
+    public void setInfo() throws SQLException {
+        setInfo(this.id);
+    }
+
+    //메소드 오버로딩
+    public static void setInfo(String userid) throws SQLException {
+        try (Statement statement = connection.createStatement(); //try with resources사용 자동으로 자원을 닫아줌
+             ResultSet resultSet = statement.executeQuery(buildSelectQuery(userid))) {
+            if (resultSet.next()) {
+                setFields(resultSet);
+                editBtn(resultSet);
+            }
+        }
+    }
+
+    //활성화, 비활성화 버튼 수정하기
+    private static void editBtn(ResultSet resultSet) throws SQLException {
+        if (resultSet.getInt("is_active") != 1 ) {
+            inactivationButton.setText("활성화");
+        }
+        else {
+            inactivationButton.setText("비활성화");
+        }
+    }
+
+    //쿼리문 생성
+    private static String buildSelectQuery(String userid) {
+        return "SELECT s.staffid, s.password, s.is_active, " +
+                "r.rolename, s.name, s.off, s.phone, s.identitynumber, s.major, s.address " +
+                "FROM staff s INNER JOIN role r ON s.roleid = r.roleid " +
+                "WHERE s.staffid = '" + userid + "'";
+    }
+
+    //textField에 문자 입력
+    private static void setFields(ResultSet resultSet) throws SQLException {
+        nameField.setText(resultSet.getString("name"));
+        IDField.setText(resultSet.getString("staffid"));
+        passwdField.setText(resultSet.getString("password"));
+        setIDNum(resultSet.getString("identitynumber"));
+        titleField.setText(resultSet.getString("rolename"));
+        phoneNumField.setText(resultSet.getString("phone"));
+        majorField.setText(resultSet.getString("major"));
+        setOffDayBox(resultSet.getString("off"));
+        addressArea.setText(resultSet.getString("address"));
+    }
+
+    //주민번호 뒷자리 숨기기
+    private static void setIDNum(String idNum) {
+        String maskedIdNum = idNum.replaceAll("-.*", "-*******"); //replaceAll은 원본 문자열 변경하지 않음
+        idNumField.setText(maskedIdNum);
+    }
+
+    //쉬는날 설정
+    private static void setOffDayBox(String off) {
+        if (off == null) {
+            offDayBox.setSelectedIndex(0);
+            return;
+        }
+        int index = switch (off) {
+            case "1", "2", "3", "4", "5", "6" -> Integer.parseInt(off);
+            default -> 0;
+        };
+        offDayBox.setSelectedIndex(index);
     }
 
 }
@@ -602,7 +800,7 @@ class AddStaff extends JFrame implements ActionListener{
     }
 
     //주민번호 형식 확인 메소드
-    static boolean is_Ok(String str, int length) {
+    private boolean is_Ok(String str, int length) {
         if (str.length() != length) {
             return false;
         }

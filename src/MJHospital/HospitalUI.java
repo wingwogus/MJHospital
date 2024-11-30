@@ -2,8 +2,10 @@ package MJHospital;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.Connection;
-import java.sql.Statement;
+import java.sql.SQLException;
 
 class HospitalUI extends JFrame {
 
@@ -55,5 +57,19 @@ class HospitalUI extends JFrame {
         // 프레임에 패널 추가
         add(topPanel, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (connection != null) {
+                    try {
+                        connection.close();
+                        JOptionPane.showMessageDialog(HospitalUI.this, "데이터베이스 연결 해제", "성공", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
     }
 }

@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.*;
 
 class Login extends JFrame implements ActionListener {
@@ -17,7 +19,7 @@ class Login extends JFrame implements ActionListener {
     Statement statement;
     ResultSet resultSet;
 
-    Login() {
+    public Login() {
         connectToDatabase();
         setTitle("Login");
         setSize(600, 600);
@@ -90,6 +92,20 @@ class Login extends JFrame implements ActionListener {
         cancelButton.addActionListener(this);
         idField.addActionListener(this);
         passwordField.addActionListener(this);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (connection != null) {
+                    try {
+                        connection.close();
+                        JOptionPane.showMessageDialog(Login.this, "데이터베이스 연결 해제", "성공", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
     }
 
     //DB 연결
