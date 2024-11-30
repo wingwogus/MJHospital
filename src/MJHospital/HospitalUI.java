@@ -58,7 +58,7 @@ class HospitalUI extends JFrame {
         add(topPanel, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
 
-        addWindowListener(new WindowAdapter() {
+        addWindowListener(new WindowAdapter() { //창 종료시 커넥션 클로즈
             @Override
             public void windowClosing(WindowEvent e) {
                 if (connection != null) {

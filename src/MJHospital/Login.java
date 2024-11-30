@@ -93,7 +93,7 @@ class Login extends JFrame implements ActionListener {
         idField.addActionListener(this);
         passwordField.addActionListener(this);
 
-        addWindowListener(new WindowAdapter() {
+        addWindowListener(new WindowAdapter() { //창 종료시 커넥션 클로즈
             @Override
             public void windowClosing(WindowEvent e) {
                 if (connection != null) {
