@@ -10,33 +10,49 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.Vector;
 
 class StaffManagement extends JPanel {
     Connection connection;
     StaffList staffList;
     StaffInfo staffInfo;
+    String role, id;
 
-    public StaffManagement(Connection c) {
+    public StaffManagement(Connection c, String i, String r) {
         setLayout(new BorderLayout());
         connection = c;
-        staffList = new StaffList(connection);
-        staffInfo = new StaffInfo(connection);
-        add(staffList, BorderLayout.WEST);
+        id = i;
+        role = r;
+
+        staffInfo = new StaffInfo(connection, id, role);
         add(staffInfo, BorderLayout.CENTER);
+        staffList = new StaffList(connection, id, role);
+        add(staffList, BorderLayout.WEST);
     }
 
 }
 
 class StaffList extends JPanel implements ActionListener {
+    Connection connection;
+
+    String id, role;
+
     Vector<String> columnNames;
     Vector<Vector<String>> data;
     DefaultTableModel model;
     JTable table;
-    Connection connection;
 
-    public StaffList(Connection c) {
+    JTextField searchField;
+    JButton searchButton;
+    ButtonGroup group1, group2;
+    JRadioButton radioBtnA, radioBtnD, radioBtnN, radioBtnAA, radioBtnO, radioBtnX;
+
+    public StaffList(Connection c, String i,  String r) {
         connection = c;
+        id = i;
+        role = r;
+
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("의료진 검색"));
         setPreferredSize(new Dimension(300, getHeight()));
@@ -48,11 +64,14 @@ class StaffList extends JPanel implements ActionListener {
         // 검색 필드와 버튼을 담을 패널
         JPanel searchFieldPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         searchFieldPanel.setBackground(Color.LIGHT_GRAY);
+
         JLabel searchLabel = new JLabel("이름 :");
         searchLabel.setFont(new Font("Gothic", Font.PLAIN, 15));
         searchLabel.setForeground(Color.BLACK);
-        JTextField searchField = new JTextField(13);
-        JButton searchButton = new JButton("검색");
+
+        searchField = new JTextField(13);
+        searchButton = new JButton("검색");
+
         searchFieldPanel.add(searchLabel);
         searchFieldPanel.add(searchField);
         searchFieldPanel.add(searchButton);
@@ -63,25 +82,40 @@ class StaffList extends JPanel implements ActionListener {
         //라디오 버튼 패널
         JPanel radioPanel = new JPanel(new GridLayout(2, 3));
         radioPanel.setBackground(Color.LIGHT_GRAY);
-        ButtonGroup group1 = new ButtonGroup();
-        ButtonGroup group2 = new ButtonGroup();
-        JRadioButton r1 = new JRadioButton("전체");
-        JRadioButton r2 = new JRadioButton("의사");
-        JRadioButton r3 = new JRadioButton("간호사");
-        JRadioButton r4 = new JRadioButton("재직중");
-        JRadioButton r5 = new JRadioButton("퇴사");
 
-        group1.add(r1);
-        group1.add(r2);
-        group1.add(r3);
-        group2.add(r4);
-        group2.add(r5);
-        radioPanel.add(r1);
-        radioPanel.add(r2);
-        radioPanel.add(r3);
-        radioPanel.add(r4);
-        radioPanel.add(r5);
+        group1 = new ButtonGroup();
+        group2 = new ButtonGroup();
+        radioBtnA = new JRadioButton("전체", true);
+        radioBtnD = new JRadioButton("의사");
+        radioBtnN = new JRadioButton("간호사");
+        radioBtnAA = new JRadioButton("전체",  true);
+        radioBtnO = new JRadioButton("재직중");
+        radioBtnX = new JRadioButton("퇴사");
+
+        group1.add(radioBtnA);
+        group1.add(radioBtnD);
+        group1.add(radioBtnN);
+        group2.add(radioBtnAA);
+        group2.add(radioBtnO);
+        group2.add(radioBtnX);
+        radioPanel.add(radioBtnA);
+        radioPanel.add(radioBtnD);
+        radioPanel.add(radioBtnN);
+        radioPanel.add(radioBtnAA);
+        radioPanel.add(radioBtnO);
+        radioPanel.add(radioBtnX);
         radioPanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 3, 0));
+
+        //admin이 아니라면 검색 패널의 컴포넌트 비활성화
+        if (!role.equals("admin")){
+            searchField.setEditable(false);
+            searchButton.setEnabled(false);
+            radioBtnA.setEnabled(false);
+            radioBtnD.setEnabled(false);
+            radioBtnN.setEnabled(false);
+            radioBtnO.setEnabled(false);
+            radioBtnX.setEnabled(false);
+        }
 
         // 검색 패널에 컴포넌트 추가
         searchPanel.add(searchFieldPanel, BorderLayout.NORTH);
@@ -89,8 +123,10 @@ class StaffList extends JPanel implements ActionListener {
 
         // 테이블 설정
         columnNames = new Vector<String>();
+        columnNames.add("ID");
         columnNames.add("직급");
         columnNames.add("이름");
+        columnNames.add("재직 여부");
 
         data = new Vector<Vector<String>>();
         model = new DefaultTableModel(data, columnNames);
@@ -105,19 +141,103 @@ class StaffList extends JPanel implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
-        String s = e.getActionCommand();
-        if (s.equals("검색")){
-
+        try {
+            searchStaff();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + ex.getMessage(),
+                    "오류", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    public void searchStaff() throws SQLException{
+        String getName = searchField.getText();
+
+        //라디오버튼 선택 확인
+        ButtonModel selectedModel1 = group1.getSelection();
+        ButtonModel selectedModel2 = group2.getSelection();
+        String radioRole = getText(group1, selectedModel1);
+        String radioActive = getText(group2, selectedModel2);
+
+        //쿼리문 생성
+        String selectQuery = setQuery(radioActive, radioRole, getName);
+
+        //테이블 만들기
+        setTable(selectQuery);
+    }
+
+    public String getText(ButtonGroup group, ButtonModel selectedModel) {
+        if (selectedModel != null) {
+            for (Enumeration<AbstractButton> buttons = group.getElements(); buttons.hasMoreElements();) {
+                AbstractButton button = buttons.nextElement();
+                if (button.getModel() == selectedModel) {
+                    return button.getText();
+                }
+            }
+        }
+        return null;
+    }
+
+    public String setQuery(String radioActive, String radioRole, String getName) {
+        String query = "SELECT s.staffid, r.rolename, s.name, s.is_active FROM staff s INNER JOIN role r ON s.roleid = r.roleid  WHERE s.name LIKE '%" + getName + "%'";
+        if (radioActive.equals("재직중")) {
+            query += " AND s.is_active = 1";
+        }
+        else if (radioActive.equals("퇴사")) {
+            query += " AND s.is_active = 0";
+        }
+        if (radioRole.equals("의사")) {
+            query += " AND r.rolename = 'doctor'";
+        }
+        else if (radioRole.equals("간호사")) {
+            query += " AND r.rolename = 'nurse'";
+        }
+        query += " AND r.rolename != 'admin'";
+        return query;
+    }
+
+    public void setTable(String selectQuery) throws SQLException {
+        Statement statement;
+        ResultSet resultSet;
+        statement = connection.createStatement();
+
+        data.clear();
+        resultSet = statement.executeQuery(selectQuery);
+
+        while(resultSet.next()) {
+            Vector <String> text = new Vector<String>();
+            text.add(resultSet.getString("staffid"));
+            text.add(resultSet.getString("rolename"));
+            text.add(resultSet.getString("name"));
+            if(resultSet.getString("is_active").equals("1")){
+                text.add("재직중");
+            }
+            else {
+                text.add("퇴사자");
+            }
+            data.add(text);
+        }
+
+        table.setModel(new DefaultTableModel(data, columnNames));
+        table.updateUI();
     }
 }
 
 class StaffInfo extends JPanel implements ActionListener {
     Connection connection;
-    public StaffInfo(Connection c) {
+
+    String id, role;
+
+    JTextField nameField, IDField, passwdField, idNumField, titleField, phoneNumField, majorField, offDayField;
+    JTextArea addressArea;
+    JButton addButton, editButton, inactivationButton;
+
+    public StaffInfo(Connection c, String i, String r) {
         Color backgroundColor = new Color(200, 200, 200);
 
         connection = c;
+
+        id = i;
+        role = r;
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("의료진 정보"));
@@ -155,19 +275,19 @@ class StaffInfo extends JPanel implements ActionListener {
         JLabel addressLabel = new JLabel("주소");
         addressLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 20));
 
-        JTextField nameField = new JTextField();
+        nameField = new JTextField();
         nameField.setEditable(false);
-        JTextField IDField = new JTextField();
+        IDField = new JTextField();
         IDField.setEditable(false);
-        JTextField passwdField = new JTextField();
-        JTextField idNumField = new JTextField();
+        passwdField = new JTextField();
+        idNumField = new JTextField();
         idNumField.setEditable(false);
-        JTextField titleField = new JTextField();
+        titleField = new JTextField();
         titleField.setEditable(false);
-        JTextField phoneNumField = new JTextField();
-        JTextField majorField = new JTextField();
-        JTextField offDayField = new JTextField();
-        JTextArea addressArea = new JTextArea();
+        phoneNumField = new JTextField();
+        majorField = new JTextField();
+        offDayField = new JTextField();
+        addressArea = new JTextArea();
         addressArea.setLineWrap(true);
         JScrollPane addressScroll = new JScrollPane(addressArea);
 
@@ -221,9 +341,9 @@ class StaffInfo extends JPanel implements ActionListener {
         // 버튼 패널
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setBackground(backgroundColor);
-        JButton addButton = new JButton("추가");
-        JButton editButton = new JButton("수정");
-        JButton inactivationButton = new JButton("비활성화");
+        addButton = new JButton("추가");
+        editButton = new JButton("수정");
+        inactivationButton = new JButton("비활성화");
 
         buttonPanel.add(addButton);
         buttonPanel.add(editButton);
@@ -239,10 +359,15 @@ class StaffInfo extends JPanel implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
-        String s = e.getActionCommand();
-        if (s.equals("추가")) {
+        if (e.getSource() == addButton) {
             AddStaff addStaff = new AddStaff(connection);
             addStaff.setVisible(true);
+        }
+        else if (e.getSource() == editButton) {
+
+        }
+        else if (e.getSource() == inactivationButton) {
+
         }
     }
 
@@ -309,7 +434,7 @@ class AddStaff extends JFrame implements ActionListener{
         String[] offStr = {"", "월", "화", "수", "목", "금", "토"};
         offDayBox = new JComboBox(offStr);
 
-        String[] roleStr = {"의사", "간호사"};
+        String[] roleStr = {"doctor", "nurse"};
         roleBox = new JComboBox(roleStr);
 
         addressArea.setLineWrap(true);
@@ -406,7 +531,6 @@ class AddStaff extends JFrame implements ActionListener{
             JOptionPane.showMessageDialog(this, "예상치 못한 오류: " + ex.getMessage(),
                 "오류", JOptionPane.ERROR_MESSAGE);
         }
-
     }
 
     public void addStaff() throws SQLException, IllegalArgumentException{
@@ -457,18 +581,20 @@ class AddStaff extends JFrame implements ActionListener{
         }
 
         //INSERT 쿼리문 작성 및 실행
-        int roleID;
-        String offDay;
-        if(getRole.equals("의사")) {
-            roleID = 1;
-        }
-        else {
-            roleID = 2;
-        }
+        resultSet = statement.executeQuery("SELECT roleid FROM role WHERE rolename = '" + getRole + "'");
+        resultSet.next();
+        int roleID = resultSet.getInt("roleid");
+        int offDay;
+
         offDay = offCode(getOff);
         String insertQuery = "Insert INTO staff values ('" + getID + "', '" + getPasswd + "', 1, '"
                 + roleID + "', '" + getName + "', '" + offDay + "', '" + getPhone + "', '" + getIDNum + "', '"
                 + getMajor + "', '" + getAddress + "')";
+        if (offDay == 0){
+            insertQuery = "Insert INTO staff values ('" + getID + "', '" + getPasswd + "', 1, '"
+                    + roleID + "', '" + getName + "', null, '" + getPhone + "', '" + getIDNum + "', '"
+                    + getMajor + "', '" + getAddress + "')";
+        }
         statement.executeUpdate(insertQuery);
         JOptionPane.showMessageDialog(this, "의료진이 성공적으로 추가되었습니다.", "확인", JOptionPane.INFORMATION_MESSAGE);
         statement.close();
@@ -489,28 +615,28 @@ class AddStaff extends JFrame implements ActionListener{
     }
 
     //콤보박스 값 토대로 휴무일 코드 반환
-    static String offCode(String off) {
+    static int offCode(String off) {
         switch (off) {
             case "월" -> {
-                return "1";
+                return 1;
             }
             case "화" -> {
-                return "2";
+                return 2;
             }
             case "수" -> {
-                return "3";
+                return 3;
             }
             case "목" -> {
-                return "4";
+                return 4;
             }
             case "금" -> {
-                return "5";
+                return 5;
             }
             case "토" -> {
-                return "6";
+                return 6;
             }
         }
-        return null;
+        return 0;
     }
 }
 

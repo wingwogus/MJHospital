@@ -121,7 +121,9 @@ class Login extends JFrame implements ActionListener {
     public void check() {
         String id = idField.getText();
         String password = passwordField.getText();
-        String idQuery = "SELECT password, is_active, name, roleid FROM staff WHERE staffid = '" + id + "'";
+        String idQuery = "SELECT s.password, s.is_active, s.name, r.rolename " +
+                "FROM staff s INNER JOIN role r ON s.roleid = r.roleid " +
+                "WHERE staffid = '" + id + "'";
 
         try {
             resultSet = statement.executeQuery(idQuery);
@@ -132,24 +134,12 @@ class Login extends JFrame implements ActionListener {
                 if (isActive != 0) {
                     //비밀번호 확인
                     if (password.equals(storedPassword)) {
-                        String name = resultSet.getString("name");
-                        String role;
                         //이름과 직급 저장 후 HospitalUI 클래스 열기
-                        if (resultSet.getInt("roleid") == 0) {
-                            role = "admin";
-                        }
-                        else if (resultSet.getInt("roleid") == 1) {
-                            role = "dortor";
-                        }
-                        else if (resultSet.getInt("roleid") == 2) {
-                            role = "nurse";
-                        }
-                        else {
-                            role = "오류";
-                        }
+                        String name = resultSet.getString("name");
+                        String role = resultSet.getString("rolename");
                         statement.close();
                         resultSet.close();
-                        HospitalUI uiFrame = new HospitalUI(name, role, connection);
+                        HospitalUI uiFrame = new HospitalUI(id, name, role, connection);
                         uiFrame.setVisible(true);
                         this.dispose();
                     } else {

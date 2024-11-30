@@ -7,13 +7,14 @@ import java.sql.Statement;
 
 class HospitalUI extends JFrame {
 
-    public HospitalUI(String n, String r, Connection c) {
+    public HospitalUI(String i, String n, String r, Connection c) {
         setTitle("Main");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 720);
         setLocationRelativeTo(null);
         setResizable(false);
 
+        String id = i;
         String name = n;
         String role = r;
 
@@ -49,7 +50,7 @@ class HospitalUI extends JFrame {
         tabbedPane.addTab("환자 관리", new PatientManagement());
         tabbedPane.addTab("진료 관리", new ConsultationManagement());
         tabbedPane.addTab("예약 관리", new ReservationManagement());
-        tabbedPane.addTab("정보 관리", new StaffManagement(connection));
+        tabbedPane.addTab("정보 관리", new StaffManagement(connection, id, role));
 
         // 프레임에 패널 추가
         add(topPanel, BorderLayout.NORTH);
