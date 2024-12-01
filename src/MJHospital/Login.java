@@ -33,7 +33,7 @@ class Login extends JFrame implements ActionListener {
         topPanel = new JPanel();
         topPanel.setBackground(new Color(150, 150, 150));
         topPanel.setLayout(null);
-        topPanel.setBounds(0, 20, 600, 80);
+        topPanel.setBounds(0, 0, 600, 80);
 
         minLogoIcon = new ImageIcon("images/mjicon.png");
         minLogoLabel = new JLabel(minLogoIcon);
@@ -56,7 +56,7 @@ class Login extends JFrame implements ActionListener {
 
         logoIcon = new ImageIcon("images/logo.png");
         logoLabel = new JLabel(logoIcon);
-        logoLabel.setBounds(175, 20, 250, 200);
+        logoLabel.setBounds(175, 10, 250, 200);
         centerPanel.add(logoLabel);
 
 

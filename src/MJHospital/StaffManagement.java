@@ -134,6 +134,7 @@ class StaffList extends JPanel implements ActionListener, MouseListener {
         data = new Vector<Vector<String>>();
         model = new DefaultTableModel(data, columnNames);
         table = new JTable(model);
+        table.setDefaultEditor(Object.class, null);
         table.getColumnModel().getColumn(0).setPreferredWidth(20);
         table.addMouseListener(this);
 

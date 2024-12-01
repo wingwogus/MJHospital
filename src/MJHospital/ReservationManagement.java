@@ -129,13 +129,13 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         day2.setSelectedItem(now.getDayOfMonth());
         JLabel wave = new JLabel("~");
 
-        year.setBounds(xValue, yValue, 60, height);
-        month.setBounds(xValue + 60, yValue, 40, height);
-        day.setBounds(xValue + 100, yValue, 40, height);
-        wave.setBounds(xValue + 150, yValue, 10, height);
-        year2.setBounds(xValue + 170, yValue, 60, height);
-        month2.setBounds(xValue + 230, yValue, 40, height);
-        day2.setBounds(xValue + 270, yValue, 40, height);
+        year.setBounds(xValue, yValue, 70, height);
+        month.setBounds(xValue + 70, yValue, 50, height);
+        day.setBounds(xValue + 120, yValue, 50, height);
+        wave.setBounds(xValue + 170, yValue, 10, height);
+        year2.setBounds(xValue + 180, yValue, 70, height);
+        month2.setBounds(xValue + 250, yValue, 50, height);
+        day2.setBounds(xValue + 300, yValue, 50, height);
 
         add(year);
         add(month);
@@ -146,11 +146,11 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         add(day2);
 
         JButton addButton = new JButton("추가");
-        addButton.setBounds(xValue, yValue + spacing, 140, height);
+        addButton.setBounds(xValue, yValue + spacing, 170, height);
         add(addButton);
 
         JButton searchButton = new JButton("검색");
-        searchButton.setBounds(xValue + 170, yValue + spacing, 140, height);
+        searchButton.setBounds(xValue + 180, yValue + spacing, 170, height);
         add(searchButton);
 
         patientField.addActionListener(this);
@@ -430,9 +430,9 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
         month.setSelectedItem(now.getMonthValue());
         day.setSelectedItem(now.getDayOfMonth());
 
-        year.setBounds(xValue + labelWidth, yValue, 60, height);
-        month.setBounds(xValue + labelWidth + 60, yValue, 40, height);
-        day.setBounds(xValue + labelWidth + 100, yValue, 40, height);
+        year.setBounds(xValue + labelWidth, yValue, 70, height);
+        month.setBounds(xValue + labelWidth + 70, yValue, 50, height);
+        day.setBounds(xValue + labelWidth + 120, yValue, 50, height);
 
         add(year);
         add(month);
@@ -756,9 +756,9 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         month.setSelectedItem(now.getMonthValue());
         day.setSelectedItem(now.getDayOfMonth());
 
-        year.setBounds(xValue + labelWidth, yValue + 3 * spacing, 60, height);
-        month.setBounds(xValue + labelWidth + 60, yValue + 3 * spacing, 40, height);
-        day.setBounds(xValue + labelWidth + 100, yValue + 3 * spacing, 40, height);
+        year.setBounds(xValue + labelWidth, yValue + 3 * spacing, 70, height);
+        month.setBounds(xValue + labelWidth + 70, yValue + 3 * spacing, 50, height);
+        day.setBounds(xValue + labelWidth + 120, yValue + 3 * spacing, 50, height);
 
         mainPanel.add(year);
         mainPanel.add(month);

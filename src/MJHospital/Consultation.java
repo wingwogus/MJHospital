@@ -5,6 +5,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Vector;
 
 public class Consultation extends JPanel {
@@ -56,6 +57,11 @@ public class Consultation extends JPanel {
         NdoctorNoteArea = new JTextArea(4, 20);
         NprescriptionArea = new JTextArea(4, 20);
 
+        diseaseArea.setEditable(false);
+        NsymptomsArea.setEditable(false);
+        NdoctorNoteArea.setEditable(false);
+        NprescriptionArea.setEditable(false);
+
         JPanel PrintPanel = new JPanel();
         PrintPanel.setLayout(new BoxLayout(PrintPanel, BoxLayout.Y_AXIS));
         PrintPanel.add(createLabeledPanel("병명 :", diseaseArea));
@@ -104,17 +110,6 @@ public class Consultation extends JPanel {
         setVisible(true);
     }
 
-    private void connectToDatabase() {
-        try {
-            connection = DriverManager.getConnection(
-                    "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital",
-                    "ssk08078", "tjdtlghks11"
-            );
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "DB 연결 실패: " + e.getMessage());
-        }
-    }
-
     public void loadPatientList() {
         try {
             patientListModel.clear();
@@ -125,12 +120,13 @@ public class Consultation extends JPanel {
                         SELECT r.patientid, r.reservationtime, p.name, r.note, r.status, r.reservationdate
                         FROM reservation r
                         JOIN patient p ON r.patientid = p.patientid
-                        WHERE r.reservationdate = ? 
+                        WHERE r.reservationdate = ? AND staffid = ? 
                         ORDER BY r.reservationtime ASC
                     """;
 
             PreparedStatement pstmt = connection.prepareStatement(query);
-            pstmt.setString(1, today.toString());
+            pstmt.setString(1, today.plusDays(1).toString());
+            pstmt.setString(2, currentStaffId);
 
             ResultSet rs = pstmt.executeQuery();
 
@@ -278,6 +274,10 @@ public class Consultation extends JPanel {
             pstmt.executeUpdate();
 
             JOptionPane.showMessageDialog(this, "진료 기록이 저장되었습니다.");
+
+            symptomsArea.setText("");
+            doctorNoteArea.setText("");
+            prescriptionArea.setText("");
 
             loadPatientList();
         } catch (SQLException e) {
