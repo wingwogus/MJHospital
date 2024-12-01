@@ -60,7 +60,7 @@ class Login extends JFrame implements ActionListener {
 
     public void checkLogin(String id, String pass) {
         if (id.equals("doctor") && pass.equals("1234")) {
-            new HospitalUI().setVisible(true);
+            new HospitalUI(id).setVisible(true);
             dispose();
         } else {
             JOptionPane.showMessageDialog(null, "로그인 실패");

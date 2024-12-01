@@ -5,7 +5,12 @@ import java.awt.*;
 
 class HospitalUI extends JFrame {
 
-    public HospitalUI() {
+    private String currentStaffId;
+
+
+    public HospitalUI(String staffId) {
+        this.currentStaffId = staffId;
+
         setTitle("Main");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 720); // 필요한 크기로 설정
@@ -24,7 +29,7 @@ class HospitalUI extends JFrame {
 
         // 탭 패널 생성
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("진료", new Consultation());
+        tabbedPane.addTab("진료", new Consultation(currentStaffId));
         tabbedPane.addTab("환자 관리", new PatientManagement());
         tabbedPane.addTab("진료 관리", new ConsultationManagement());
         tabbedPane.addTab("예약 관리", new ReservationManagement());
