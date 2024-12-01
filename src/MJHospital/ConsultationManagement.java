@@ -148,8 +148,6 @@ public class ConsultationManagement extends JPanel {
                             button.setForeground(Color.BLACK);
                         }
                     } catch (NumberFormatException e) {
-                        // 무시하거나, 로그에 기록할 수 있습니다.
-                        System.err.println("Invalid day format: " + buttonText);
                     }
                 }
             }
