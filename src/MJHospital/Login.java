@@ -59,7 +59,7 @@ class Login extends JFrame implements ActionListener {
     }
 
     public void checkLogin(String id, String pass) {
-        if (id.equals("doctor") && pass.equals("1234")) {
+        if (id.equals("ssh") && pass.equals("1234")) {
             new HospitalUI(id).setVisible(true);
             dispose();
         } else {

@@ -15,8 +15,11 @@ public class ReservationManagement extends JPanel {
     ReservationListPanel reservationListPanel;
     ReservationConditionPanel reservationConditionPanel;
     ReservationDetailPanel reservationDetailsPanel;
+    Consultation consultation;
 
-    public ReservationManagement() {
+    public ReservationManagement(Consultation consultation) {
+        this.consultation = consultation;
+
         setLayout(new BorderLayout());
         String url = "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital";
         String userName = "ljh";
@@ -29,7 +32,7 @@ public class ReservationManagement extends JPanel {
 
         reservationDetailsPanel = new ReservationDetailPanel(conn);
         reservationListPanel = new ReservationListPanel(reservationDetailsPanel);
-        reservationConditionPanel = new ReservationConditionPanel(reservationListPanel, conn);
+        reservationConditionPanel = new ReservationConditionPanel(reservationListPanel, conn, consultation);
 
         reservationDetailsPanel.setReservationListPanel(reservationListPanel);
         reservationDetailsPanel.setReservationConditionPanel(reservationConditionPanel);
@@ -50,8 +53,10 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
     ReservationListPanel reservationListPanel;
     JTextField patientField, idField, phoneField, doctorField;
     JComboBox<Integer> year, year2, month, month2, day, day2;
+    Consultation consultation;
 
-    public ReservationConditionPanel(ReservationListPanel reservationListPanel, Connection conn) {
+    public ReservationConditionPanel(ReservationListPanel reservationListPanel, Connection conn, Consultation consultation) {
+        this.consultation = consultation;
         this.reservationListPanel = reservationListPanel;
         this.conn = conn;
         LocalDate now = LocalDate.now();
@@ -173,7 +178,7 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         try {
             if (e.getActionCommand().equals("추가")) {
-                new ReservationAddWindow(conn, this).setVisible(true);
+                new ReservationAddWindow(conn, this, consultation).setVisible(true);
             } else if (e.getSource() == year || e.getSource() == month) {
                 setDate(year, month, day);
             } else if (e.getSource() == year2 || e.getSource() == month2) {
@@ -665,11 +670,13 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     JScrollPane scrollPane;
     String doctorId;
     ReservationConditionPanel reservationConditionPanel;
+    Consultation consultation;
     boolean patientTurn = true;
 
-    public ReservationAddWindow(Connection conn, ReservationConditionPanel reservationConditionPanel) {
+    public ReservationAddWindow(Connection conn, ReservationConditionPanel reservationConditionPanel, Consultation consultation) {
         this.conn = conn;
         this.reservationConditionPanel = reservationConditionPanel;
+        this.consultation = consultation;
 
         setTitle("예약 추가");
         setSize(600, 500);
@@ -848,8 +855,8 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
 
         int isFirst = isFirst(idField.getText());
 
-        String query = "INSERT INTO reservation(patientid, staffid, note, reservationdate, reservationtime, isFirst) " +
-                "VALUES ((SELECT patientid FROM patient WHERE identitynumber = ?), (SELECT staffid FROM staff WHERE identitynumber = ?), ?, ?, ?, ?)";
+        String query = "INSERT INTO reservation(patientid, staffid, note, reservationdate, reservationtime, isFirst, status) " +
+                "VALUES ((SELECT patientid FROM patient WHERE identitynumber = ?), (SELECT staffid FROM staff WHERE identitynumber = ?), ?, ?, ?, ?, ?)";
         try {
             PreparedStatement pstm = conn.prepareStatement(query);
             if (checkDate(reservationDate) && checkField() && checkHoliday(reservationDate)) {
@@ -859,6 +866,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
                 pstm.setString(4, reservationDate.toString());
                 pstm.setString(5, reservationTime.toString());
                 pstm.setInt(6, isFirst);
+                pstm.setInt(7, 0);
                 if (pstm.executeUpdate() > 0) {
                     JOptionPane.showMessageDialog(this, "추가 성공");
                     reservationConditionPanel.searchReservation();
@@ -867,6 +875,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
                     JOptionPane.showMessageDialog(this, "추가 실패");
                 }
             }
+            consultation.loadPatientList();
         } catch (SQLIntegrityConstraintViolationException ex) {
             JOptionPane.showMessageDialog(this, "해당 날짜와 시간에는 이미 예약이 있습니다");
             ex.printStackTrace();

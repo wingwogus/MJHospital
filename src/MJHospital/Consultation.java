@@ -115,7 +115,7 @@ public class Consultation extends JPanel {
         }
     }
 
-    private void loadPatientList() {
+    public void loadPatientList() {
         try {
             patientListModel.clear();
 
@@ -130,7 +130,7 @@ public class Consultation extends JPanel {
                     """;
 
             PreparedStatement pstmt = connection.prepareStatement(query);
-            pstmt.setString(1, today.toString());
+            pstmt.setString(1, today.plusDays(1).toString());
 
             ResultSet rs = pstmt.executeQuery();
 
@@ -169,6 +169,10 @@ public class Consultation extends JPanel {
 
             // 날짜가 없을 경우 알림
             if (datePickComboBox.getItemCount() == 0) {
+                diseaseArea.setText("");
+                NsymptomsArea.setText("");
+                NdoctorNoteArea.setText("");
+                NprescriptionArea.setText("");
                 JOptionPane.showMessageDialog(this, "해당 환자의 진료 날짜가 없습니다.");
             }
 
