@@ -20,6 +20,7 @@ class Login extends JFrame implements ActionListener {
     ResultSet resultSet;
 
     public Login() {
+
         connectToDatabase();
         setTitle("Login");
         setSize(600, 600);
