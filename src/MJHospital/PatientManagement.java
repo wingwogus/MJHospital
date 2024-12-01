@@ -13,16 +13,10 @@ class PatientManagement extends JPanel {
     PatientConditionPanel patientConditionPanel;
     PatientDetailsPanel patientDetailsPanel;
 
-    public PatientManagement() {
+    public PatientManagement(Connection conn) {
         setLayout(new BorderLayout());
-        String url = "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital";
-        String userName = "ljh";
-        String password = "1234";
-        try {
-            conn = DriverManager.getConnection(url, userName, password);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        this.conn = conn;
+
         patientDetailsPanel = new PatientDetailsPanel(conn);
         patientListPanel = new PatientListPanel(patientDetailsPanel);
         patientConditionPanel = new PatientConditionPanel(patientListPanel, conn);
@@ -541,7 +535,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
         titlePanel.setBackground(Color.LIGHT_GRAY);
 
         JLabel titleLabel = new JLabel("환자 추가");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 30));
+        titleLabel.setFont(new Font("Gothic", Font.BOLD, 30));
         titlePanel.add(titleLabel, BorderLayout.NORTH);
 
         add(titlePanel, BorderLayout.NORTH);

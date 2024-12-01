@@ -9,11 +9,8 @@ import java.sql.SQLException;
 
 class HospitalUI extends JFrame {
 
-    private String currentStaffId;
 
     public HospitalUI(String i, String n, String r, Connection c) {
-        this.currentStaffId = i;
-
         setTitle("Main");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 720);
@@ -53,12 +50,12 @@ class HospitalUI extends JFrame {
 
         // 탭 패널 생성
         JTabbedPane tabbedPane = new JTabbedPane();
-        Consultation consultation = new Consultation(currentStaffId);
+        Consultation consultation = new Consultation(i, connection);
         tabbedPane.addTab("진료", consultation);
-        tabbedPane.addTab("환자 관리", new PatientManagement());
-        tabbedPane.addTab("진료 관리", new ConsultationManagement());
+        tabbedPane.addTab("진료 관리", new ConsultationManagement(connection));
+        tabbedPane.addTab("환자 관리", new PatientManagement(connection));
+        tabbedPane.addTab("예약 관리", new ReservationManagement(consultation, connection));
         tabbedPane.addTab("정보 관리", new StaffManagement(connection, id, role));
-        tabbedPane.addTab("예약 관리", new ReservationManagement(consultation));
 
         // 프레임에 패널 추가
         add(topPanel, BorderLayout.NORTH);

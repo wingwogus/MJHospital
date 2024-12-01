@@ -17,18 +17,11 @@ public class ReservationManagement extends JPanel {
     ReservationDetailPanel reservationDetailsPanel;
     Consultation consultation;
 
-    public ReservationManagement(Consultation consultation) {
+    public ReservationManagement(Consultation consultation, Connection conn) {
         this.consultation = consultation;
+        this.conn = conn;
 
         setLayout(new BorderLayout());
-        String url = "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital";
-        String userName = "ljh";
-        String password = "1234";
-        try {
-            conn = DriverManager.getConnection(url, userName, password);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
 
         reservationDetailsPanel = new ReservationDetailPanel(conn);
         reservationListPanel = new ReservationListPanel(reservationDetailsPanel);
@@ -688,7 +681,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         titlePanel.setBackground(Color.LIGHT_GRAY);
 
         JLabel titleLabel = new JLabel("예약 추가");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 30));
+        titleLabel.setFont(new Font("Gothic", Font.BOLD, 30));
         titlePanel.add(titleLabel, BorderLayout.NORTH);
 
         add(titlePanel, BorderLayout.NORTH);

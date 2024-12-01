@@ -18,13 +18,10 @@ public class ConsultationManagement extends JPanel {
     private JLabel residentNumberLabel, visitDateLabel, heightWeightLabel, addressLabel, symptomsLabel, opinionLabel, prescriptionLabel, diseaseCodeLabel;
     private JCalendar calendar;
     private Connection connection;
-    private Statement statement;
 
-    public ConsultationManagement() {
+    public ConsultationManagement(Connection connection) {
         setLayout(null);
-
-        // DB 연결
-        connectToDatabase();
+        this.connection = connection;
 
         // 테이블 초기화
         tableModel = new DefaultTableModel(new Object[]{"날짜", "이름", "환자아이디"}, 0);
@@ -73,19 +70,6 @@ public class ConsultationManagement extends JPanel {
                 }
             }
         });
-    }
-
-    private void connectToDatabase() {
-        try {
-            connection = DriverManager.getConnection(
-                    "jdbc:mysql://hyunsql.cjwqee8gsrhn.ap-southeast-2.rds.amazonaws.com:3306/mjhospital",
-                    "sjso1142", "1142"
-            );
-            statement = connection.createStatement();
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "DB 연결 실패: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
 
     private JPanel initializeDiagnosisPanel() {

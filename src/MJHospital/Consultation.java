@@ -16,12 +16,12 @@ public class Consultation extends JPanel {
     private Connection connection;
     public String currentStaffId; // 로그인한 사용자 ID
 
-    public Consultation(String staffId) {
+    public Consultation(String staffId, Connection connection) {
         setLayout(new BorderLayout());
 
         // 데이터베이스 연결
         this.currentStaffId = staffId;
-        connectToDatabase();
+        this.connection = connection;
 
         setSize(1000, 600);
         setLayout(new BorderLayout());
@@ -302,16 +302,5 @@ public class Consultation extends JPanel {
             }
             return c;
         }
-    }
-
-    public static void main(String[] args) {
-        String staffId = "ssh";
-        SwingUtilities.invokeLater(() -> new JFrame() {{
-            setTitle("Consultation");
-            setContentPane(new Consultation(staffId));
-            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            setSize(1000, 600);
-            setVisible(true);
-        }});
     }
 }
