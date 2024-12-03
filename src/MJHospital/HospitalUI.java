@@ -50,7 +50,7 @@ class HospitalUI extends JFrame {
 
         // 탭 패널 생성
         JTabbedPane tabbedPane = new JTabbedPane();
-        Consultation consultation = new Consultation(i, connection);
+        Consultation consultation = new Consultation(id, connection);
         tabbedPane.addTab("진료", consultation);
         tabbedPane.addTab("진료 관리", new ConsultationManagement(connection));
         tabbedPane.addTab("환자 관리", new PatientManagement(connection));

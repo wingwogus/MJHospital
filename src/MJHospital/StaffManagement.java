@@ -27,12 +27,19 @@ class StaffManagement extends JPanel {
         id = i;
         role = r;
 
-        staffInfo = new StaffInfo(connection, id, role);
-        add(staffInfo, BorderLayout.CENTER);
         staffList = new StaffList(connection, id, role);
         add(staffList, BorderLayout.WEST);
+        staffInfo = new StaffInfo(connection, id, role, this);
+        add(staffInfo, BorderLayout.CENTER);
     }
 
+    public void refreshStaffList() {
+        try {
+            staffList.searchStaff(); // searchStaff() 호출
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + ex.getMessage(), "오류", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 }
 
 class StaffList extends JPanel implements ActionListener, MouseListener {
@@ -260,18 +267,20 @@ class StaffInfo extends JPanel implements ActionListener {
     static JTextArea addressArea;
     JButton addButton, editButton;
     static JButton inactivationButton;
+    StaffManagement staffManagement;
 
     static {
         inactivationButton = new JButton("비활성화"); //이유는 모르겠는데 초기화가 안된대서 초기화
     }
 
-    public StaffInfo(Connection c, String i, String r) {
+    public StaffInfo(Connection c, String i, String r, StaffManagement sm) {
         Color backgroundColor = new Color(200, 200, 200);
 
         connection = c;
 
         id = i;
         role = r;
+        staffManagement = sm;
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("의료진 정보"));
@@ -423,6 +432,7 @@ class StaffInfo extends JPanel implements ActionListener {
         else if (e.getSource() == inactivationButton) {
             try {
                 inactivationUser();
+                staffManagement.refreshStaffList();
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + ex.getMessage(),
                         "오류", JOptionPane.ERROR_MESSAGE);
