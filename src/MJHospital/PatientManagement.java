@@ -412,13 +412,8 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
 
         JButton modifyButton = new JButton("수정");
         modifyButton.addActionListener(this);
-        modifyButton.setBounds(xValue, yValue + 4 * spacing, 120, height);
+        modifyButton.setBounds(xValue, yValue + 4 * spacing, labelWidth + fieldWidth, height);
         add(modifyButton);
-
-        JButton deleteButton = new JButton("삭제");
-        deleteButton.addActionListener(this);
-        deleteButton.setBounds(xValue + 140, yValue + 4 * spacing, 120, height);
-        add(deleteButton);
     }
 
     @Override
@@ -427,8 +422,6 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
             //수정 버튼 클릭 시
             if (e.getActionCommand().equals("수정")) {
                 modifyPatient();
-            } else if (e.getActionCommand().equals("삭제")) {
-                deletePatient();
             }
         } catch (SQLException ex) {
             System.out.println(ex.getMessage());
@@ -482,23 +475,6 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
                 patientConditionPanel.searchPatient();
             } else {
                 JOptionPane.showMessageDialog(this, "수정 실패");
-            }
-
-            pstm.close();
-        }
-    }
-
-    public void deletePatient() throws SQLException {
-        if (JOptionPane.showConfirmDialog(null, nameField.getText() + " 환자를 정말 삭제하시겠습니까?") == 0) {
-            String query = "DELETE FROM patient WHERE patientid = ?";
-            PreparedStatement pstm = conn.prepareStatement(query);
-            pstm.setInt(1, patientId);
-
-            if (pstm.executeUpdate() > 0) {
-                JOptionPane.showMessageDialog(this, "삭제 성공");
-                patientConditionPanel.searchPatient();
-            } else {
-                JOptionPane.showMessageDialog(this, "삭제 실패");
             }
 
             pstm.close();
