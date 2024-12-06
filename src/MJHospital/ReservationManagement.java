@@ -30,13 +30,10 @@ public class ReservationManagement extends JPanel {
         reservationDetailsPanel.setReservationListPanel(reservationListPanel);
         reservationDetailsPanel.setReservationConditionPanel(reservationConditionPanel);
 
-        // 환자 조건 패널 생성
         add(reservationConditionPanel, BorderLayout.NORTH);
 
-        // 환자 목록 패널 생성
         add(reservationListPanel, BorderLayout.WEST);
 
-        // 환자 상세 정보 패널 생성
         add(reservationDetailsPanel, BorderLayout.CENTER);
     }
 }
@@ -57,7 +54,6 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         setBorder(BorderFactory.createTitledBorder("예약 조건"));
         setPreferredSize(new Dimension(1000, 150));
 
-        //레이아웃 설정
         int xValue = 150;
         int yValue = 40;
         int labelWidth = 60;
@@ -109,17 +105,15 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
 
         Integer[] months = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
-        Integer[] days = new Integer[31];
-        for (int i = 0; i < 31; i++) {
-            days[i] = i + 1;
-        }
-
         year = new JComboBox<>(years);
         month = new JComboBox<>(months);
-        day = new JComboBox<>(days);
+        day = new JComboBox<>();
         year2 = new JComboBox<>(years);
         month2 = new JComboBox<>(months);
-        day2 = new JComboBox<>(days);
+        day2 = new JComboBox<>();
+
+        setDate(year, month, day);
+        setDate(year2, month2, day2);
 
         year.setSelectedItem(now.getYear());
         year2.setSelectedItem(now.getYear());
@@ -173,8 +167,10 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
             if (e.getActionCommand().equals("추가")) {
                 new ReservationAddWindow(conn, this, consultation).setVisible(true);
             } else if (e.getSource() == year || e.getSource() == month) {
+                //시작 날짜 변경 시
                 setDate(year, month, day);
             } else if (e.getSource() == year2 || e.getSource() == month2) {
+                //종료 날짜 변경 시
                 setDate(year2, month2, day2);
             } else {
                 searchReservation();
@@ -185,12 +181,14 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
 
     }
 
-    //년도와 월 선택에 따라 일수가 달라지는 기능
-    public void setDate(JComboBox<Integer> year, JComboBox<Integer> month, JComboBox<Integer> day) {
+    //년도와 월 선택에 따라 해당 달에 맞는 일수를 설정
+    private void setDate(JComboBox<Integer> year, JComboBox<Integer> month, JComboBox<Integer> day) {
+        //년도와 월을 가져와 1일로 설정
         LocalDate date = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), 1);
         LocalDate afterDate = date.plusMonths(1);
 
         Vector<Integer> days = new Vector<>();
+        //다음달 1일보다 작을 시 계속 날짜를 추가
         while (date.isBefore(afterDate)) {
             days.add(date.getDayOfMonth());
             date = date.plusDays(1);
@@ -208,23 +206,22 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
         LocalDate startDay = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), Integer.parseInt(day.getSelectedItem().toString()));
         LocalDate endDay = LocalDate.of(Integer.parseInt(year2.getSelectedItem().toString()), Integer.parseInt(month2.getSelectedItem().toString()), Integer.parseInt(day2.getSelectedItem().toString()));
 
-        //시작 날짜가 끝나는 날짜보다 뒤라면
+        //시작 날짜가 끝나는 날짜보다 후일이라면
         if (startDay.isAfter(endDay)) {
             JOptionPane.showMessageDialog(null, "검색하려는 날짜의 범위를 올바르게 지정해주세요");
         } else {
             String query = "SELECT * FROM reservation JOIN patient ON reservation.patientid = patient.patientid JOIN staff ON reservation.staffid = staff.staffid" +
                     " WHERE reservationdate >= '" + startDay + "' and reservationdate <= '" + endDay + "'";
 
+            //조건 입력 시 조건 추가
             if (!patientName.isEmpty()) query += " AND patient.name LIKE '%" + patientName + "%'";
             if (!id.isEmpty()) query += " AND patient.identitynumber LIKE '%" + id + "%'";
             if (!phone.isEmpty()) query += " AND patient.phone LIKE '%" + phone + "%'";
             if (!doctorName.isEmpty()) query += " AND staff.name LIKE '%" + doctorName + "%'";
 
             query += " ORDER BY reservationdate, reservationtime";
-            Statement st = null;
-            ResultSet rs = null;
-            st = conn.createStatement();
-            rs = st.executeQuery(query);
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
 
             //새로운 행 만들어서 삽입
             Vector<Vector<String>> dataVector = new Vector<>();
@@ -237,6 +234,7 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
                 row.add(rs.getInt("isFirst") == 1 ? "초진" : "재진");
                 dataVector.add(row);
             }
+
             reservationListPanel.setData(dataVector);
             st.close();
             rs.close();
@@ -418,14 +416,12 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
 
         Integer[] months = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
-        Integer[] days = new Integer[31];
-        for (int i = 0; i < 31; i++) {
-            days[i] = i + 1;
-        }
-
         year = new JComboBox<>(years);
         month = new JComboBox<>(months);
-        day = new JComboBox<>(days);
+        day = new JComboBox<>();
+        setDate(year, month, day);
+
+        //오늘로 설정
         year.setSelectedItem(now.getYear());
         month.setSelectedItem(now.getMonthValue());
         day.setSelectedItem(now.getDayOfMonth());
@@ -492,19 +488,18 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             else if (e.getSource() == year || e.getSource() == month) setDate(year, month, day);
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(null, "알 수 없는 오류가 발생하였습니다.");
-            ex.printStackTrace();
+            System.out.println(ex.getMessage());
         }
     }
 
     //의사 검색 시 이름에 맞는 목록 출력
-    public void searchDoctor(String name) throws SQLException {
+    private void searchDoctor(String name) throws SQLException {
         String query = "SELECT name, major, identitynumber FROM staff WHERE roleid = 1 AND is_active = 1 AND name LIKE '%" + name + "%'";
         Vector<Vector<String>> dataVector = new Vector<>();
 
-        Statement st = null;
-        ResultSet rs = null;
-        st = conn.createStatement();
-        rs = st.executeQuery(query);
+
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
         while (rs.next()) {
             Vector<String> row = new Vector<>();
             row.add(rs.getString("name"));
@@ -540,27 +535,31 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             doctorField.setText(rs.getString("staff.name"));
             noteArea.setText(rs.getString("note"));
             phoneField.setText(rs.getString("patient.phone"));
+
             year.setSelectedItem(date.getYear());
             month.setSelectedItem(date.getMonthValue());
             day.setSelectedItem(date.getDayOfMonth());
             hour.setSelectedItem(time.getHour());
             minute.setSelectedItem(time.getMinute());
-            tableModel.setRowCount(0);
 
-            st.close();
-            rs.close();
+            //의사 검색 표 초기화
+            tableModel.setRowCount(0);
         } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "알 수 없는 오류가 발생하였습니다.");
             System.out.println(e.getMessage());
+        } finally {
+            try {
+                st.close();
+                rs.close();
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "알 수 없는 오류가 발생하였습니다.");
+                System.out.println(e.getMessage());
+            }
         }
     }
 
-    //의존성 주입
-    public void setReservationListPanel(ReservationListPanel reservationListPanel) {
-        this.reservationListPanel = reservationListPanel;
-    }
-
     //년도와 월 선택 시 날짜 일수 설정 기능
-    public void setDate(JComboBox<Integer> year, JComboBox<Integer> month, JComboBox<Integer> day) {
+    private void setDate(JComboBox<Integer> year, JComboBox<Integer> month, JComboBox<Integer> day) {
         LocalDate date = LocalDate.of(Integer.parseInt(year.getSelectedItem().toString()), Integer.parseInt(month.getSelectedItem().toString()), 1);
         LocalDate afterDate = date.plusMonths(1);
         Vector<Integer> days = new Vector<>();
@@ -572,7 +571,7 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
     }
 
     //예약 수정 기능
-    public void modifyReservation() throws SQLException {
+    private void modifyReservation() throws SQLException {
         int reservationYear = Integer.parseInt(year.getSelectedItem().toString());
         int reservationMonth = Integer.parseInt(month.getSelectedItem().toString());
         int reservationDay = Integer.parseInt(day.getSelectedItem().toString());
@@ -592,6 +591,8 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             pstm.setString(3, doctorField.getText());
             pstm.setString(4, noteArea.getText().isEmpty() ? null : noteArea.getText());
             pstm.setInt(5, reservationId);
+
+            //실행이 제대로 됐는지 확인
             if (pstm.executeUpdate() > 0) {
                 JOptionPane.showMessageDialog(null, "수정 성공");
                 reservationConditionPanel.searchReservation();
@@ -604,12 +605,14 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
     }
 
     //의사 공휴일 체크
-    public boolean checkOffDay(LocalDate reservationDate) throws SQLException {
+    private boolean checkOffDay(LocalDate reservationDate) throws SQLException {
         String query = "SELECT off FROM staff WHERE name = '" + doctorField.getText() + "'";
         Statement st = conn.createStatement();
         ResultSet rs = st.executeQuery(query);
         rs.next();
         int offDay = Integer.parseInt(rs.getString("off"));
+
+        //선택한 날짜 가져와서 비교
         if (reservationDate.getDayOfWeek().getValue() == offDay) {
             JOptionPane.showMessageDialog(null, "그날은 해당 의사분의 휴일입니다");
             return false;
@@ -621,9 +624,8 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
         return true;
     }
 
-
     //예약 삭제 기능
-    public void deleteReservation() throws SQLException {
+    private void deleteReservation() throws SQLException {
         if (JOptionPane.showConfirmDialog(null, patientField.getText() + " 예약을 정말 취소하시겠습니까?") == 0) {
             String query = "DELETE FROM reservation WHERE reservationid = ?";
             PreparedStatement pstm = conn.prepareStatement(query);
@@ -637,6 +639,11 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
 
             pstm.close();
         }
+    }
+
+    //의존성 주입
+    public void setReservationListPanel(ReservationListPanel reservationListPanel) {
+        this.reservationListPanel = reservationListPanel;
     }
 
     @Override
@@ -762,14 +769,10 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
 
         Integer[] months = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
-        Integer[] days = new Integer[31];
-        for (int i = 0; i < days.length; i++) {
-            days[i] = i + 1;
-        }
-
         year = new JComboBox<>(years);
         month = new JComboBox<>(months);
-        day = new JComboBox<>(days);
+        day = new JComboBox<>();
+        setDate(year, month, day);
 
         year.setSelectedItem(now.getYear());
         month.setSelectedItem(now.getMonthValue());
@@ -856,21 +859,26 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     //예약 추가 기능
-    public void addReservation() throws SQLException {
+    private void addReservation() throws SQLException {
         int reservationYear = Integer.parseInt(year.getSelectedItem().toString());
         int reservationMonth = Integer.parseInt(month.getSelectedItem().toString());
         int reservationDay = Integer.parseInt(day.getSelectedItem().toString());
         LocalDate reservationDate = LocalDate.of(reservationYear, reservationMonth, reservationDay);
+
         int reservationHour = Integer.parseInt(hour.getSelectedItem().toString());
         int reservationMin = Integer.parseInt(minute.getSelectedItem().toString());
         LocalTime reservationTime = LocalTime.of(reservationHour, reservationMin);
 
+        //재진 여부 확인
         int isFirst = isFirst(idField.getText());
 
+        //각자의 주민번호를 부질의를 사용해서 검색
         String query = "INSERT INTO reservation(patientid, staffid, note, reservationdate, reservationtime, isFirst, status) " +
                 "VALUES ((SELECT patientid FROM patient WHERE identitynumber = ?), (SELECT staffid FROM staff WHERE identitynumber = ?), ?, ?, ?, ?, ?)";
+
+        PreparedStatement pstm = null;
         try {
-            PreparedStatement pstm = conn.prepareStatement(query);
+            pstm = conn.prepareStatement(query);
             if (checkDate(reservationDate) && checkField() && checkOffDay(reservationDate)) {
                 pstm.setString(1, idField.getText());
                 pstm.setString(2, doctorId);
@@ -879,6 +887,8 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
                 pstm.setString(5, reservationTime.toString());
                 pstm.setInt(6, isFirst);
                 pstm.setInt(7, 0);
+
+                //실행 여부 확인
                 if (pstm.executeUpdate() > 0) {
                     JOptionPane.showMessageDialog(null, "추가 성공");
                     reservationConditionPanel.searchReservation();
@@ -893,14 +903,18 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
             ex.printStackTrace();
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(null, "키와 몸무게는 숫자를 입력해주세요");
+        } finally {
+            pstm.close();
         }
     }
 
     //재진 여부 판단
-    public int isFirst(String patientId) throws SQLException {
+    private int isFirst(String patientId) throws SQLException {
         String query = "SELECT * FROM consultation WHERE patientid = (SELECT patientid FROM patient WHERE identitynumber = '" + patientId + "')";
         Statement st = conn.createStatement();
         ResultSet rs = st.executeQuery(query);
+
+        //진료 기록이 있다면
         if (rs.next()) {
             return 0;
         }
@@ -909,7 +923,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     //날짜 체크 및 공휴일 체크
-    public boolean checkDate(LocalDate reservationDate) {
+    private boolean checkDate(LocalDate reservationDate) {
         if (LocalDate.now().isAfter(reservationDate)) {
             JOptionPane.showMessageDialog(null, "오늘 이후의 날짜를 선택해주세요");
             return false;
@@ -922,7 +936,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     //환자 필드, 의사 필드 빈 칸 체크
-    public boolean checkField() {
+    private boolean checkField() {
         if (patientField.getText().isEmpty()) {
             JOptionPane.showMessageDialog(null, "환자 이름을 입력하세요");
             patientField.requestFocus();
@@ -937,10 +951,11 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     //의사 공휴일 체크
-    public boolean checkOffDay(LocalDate reservationDate) throws SQLException {
+    private boolean checkOffDay(LocalDate reservationDate) throws SQLException {
         String query = "SELECT off FROM staff WHERE identitynumber = '" + doctorId + "'";
         Statement st = conn.createStatement();
         ResultSet rs = st.executeQuery(query);
+
         rs.next();
         int offDay = Integer.parseInt(rs.getString("off"));
         if (reservationDate.getDayOfWeek().getValue() == offDay) {
@@ -955,15 +970,14 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     //이름으로 환자 검색 후 table 설정
-    public void setPatientData(String name) throws SQLException {
+    private void setPatientData(String name) throws SQLException {
         idField.setText(null);
         String query = "SELECT * FROM patient WHERE name LIKE '%" + name + "%'";
         Vector<Vector<String>> dataVector = new Vector<>();
 
-        Statement st = null;
-        ResultSet rs = null;
-        st = conn.createStatement();
-        rs = st.executeQuery(query);
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
+
         while (rs.next()) {
             Vector<String> row = new Vector<>();
             row.add(rs.getString("name") + "[" + String.format("%04d", rs.getInt("patientid")) + "]");
@@ -984,14 +998,13 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     //이름으로 의사 검색 후 table 설정
-    public void setDoctorData(String name) throws SQLException {
+    private void setDoctorData(String name) throws SQLException {
         String query = "SELECT name, major, identitynumber FROM staff WHERE roleid = 1 AND is_active = 1 AND name LIKE '%" + name + "%'";
         Vector<Vector<String>> dataVector = new Vector<>();
 
-        Statement st = null;
-        ResultSet rs = null;
-        st = conn.createStatement();
-        rs = st.executeQuery(query);
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
+
         while (rs.next()) {
             Vector<String> row = new Vector<>();
             row.add(rs.getString("name"));
@@ -1012,7 +1025,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     }
 
     //table 2개를 같은 자리에 띄워야 하기 때문에 새로운 객체를 생성
-    public void setTable(String[] columnNames, Vector<Vector<String>> dataVector) {
+    private void setTable(String[] columnNames, Vector<Vector<String>> dataVector) {
         tableModel = new DefaultTableModel(columnNames, 0);
         table = new JTable(tableModel);
         table.addMouseListener(this);

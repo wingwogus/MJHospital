@@ -181,6 +181,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
     public void searchPatient() throws SQLException {
         String query = "SELECT * FROM patient WHERE 1=1";
 
+        //작성한 조건 필드가 있다면 WHERE 절에 조건을 붙인다
         if (!nameField.getText().isEmpty()) query += " AND name LIKE '%" + nameField.getText() + "%'";
         if (!idField.getText().isEmpty()) query += " AND identitynumber LIKE '%" + idField.getText() + "%'";
         if (male.isSelected()) query += " AND gender = '남'";
@@ -192,6 +193,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         if (!heightField.getText().isEmpty()) query += " AND height = " + heightField.getText();
         if (!weightField.getText().isEmpty()) query += " AND weight = " + weightField.getText();
 
+        //환자 id 순으로 정렬
         query += " ORDER BY patientid";
 
         Statement st = conn.createStatement();
@@ -199,6 +201,7 @@ class PatientConditionPanel extends JPanel implements ActionListener {
         Vector<Vector<String>> dataVector = new Vector<>();
 
         while (rs.next()) {
+            //환자 id, 이름, 성, 주민번호를 벡터값에 넣고 표로 보내기
             Vector<String> row = new Vector<>();
             row.add(String.format("%04d", rs.getInt("patientid")));
             row.add(rs.getString("name"));
@@ -230,12 +233,11 @@ class PatientListPanel extends JPanel implements MouseListener {
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setPreferredSize(new Dimension(300, 600));
 
-        //tableModel 및 Jtable 생성
         String[] columnNames = {"환자id", "환자명", "성별", "주민번호"};
         tableModel = new DefaultTableModel(columnNames, 0);
         table = new JTable(tableModel);
 
-        //table 레이아웃 설정
+        //테이블 수정이 안 되도록 에디터 설정
         table.setDefaultEditor(Object.class, null);
         table.getColumnModel().getColumn(0).setPreferredWidth(50);
         table.getColumnModel().getColumn(1).setPreferredWidth(50);
@@ -258,8 +260,9 @@ class PatientListPanel extends JPanel implements MouseListener {
 
     @Override
     public void mouseClicked(MouseEvent e) {
+        //선택한 행에서 환자 id를 가져와서 저장
         int row = table.getSelectedRow();
-        String patientId = (String) tableModel.getValueAt(row, 0);
+        String patientId = tableModel.getValueAt(row, 0).toString();
         try {
             patientDetailsPanel.setData(patientId);
         } catch (SQLException ex) {
@@ -429,10 +432,13 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
     }
 
     public void setData(String patientId) throws SQLException {
+
+        //환자 id로 환자 검색
         String query = "SELECT * FROM patient WHERE patientid = " + patientId;
         Statement st = conn.createStatement();
         ResultSet rs = st.executeQuery(query);
 
+        //환자 정보 패널에 세팅
         rs.next();
         this.patientId = rs.getInt("patientid");
         nameField.setText(rs.getString("name"));
@@ -457,10 +463,13 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         rs.close();
     }
 
-    public void modifyPatient() throws SQLException {
+    private void modifyPatient() throws SQLException {
+        //팝업을 띄워서 수정할 지 되묻기
         if (JOptionPane.showConfirmDialog(null, "수정하시겠습니까?") == 0) {
             String query = "UPDATE patient SET phone = ?, gender = ?, bloodtype = ?, caution = ?, address = ?, height = ?, weight = ? WHERE patientid = ?";
             PreparedStatement pstm = conn.prepareStatement(query);
+
+            //값을 입력하지 않았다면 빈 칸이 들어가지 않도록 null 삽입
             pstm.setString(1, phoneField.getText().isEmpty() ? null : phoneField.getText());
             pstm.setString(2, male.isSelected() ? "남" : "여");
             pstm.setString(3, bloodTypeBox.getSelectedItem().toString().equals("선택되지 않음") ? null : bloodTypeBox.getSelectedItem().toString());
@@ -472,6 +481,8 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
 
             if (pstm.executeUpdate() > 0) {
                 JOptionPane.showMessageDialog(null, "수정 성공");
+
+                //환자 목록 다시 검색하여 새로고침
                 patientConditionPanel.searchPatient();
             } else {
                 JOptionPane.showMessageDialog(null, "수정 실패");
@@ -481,6 +492,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
         }
     }
 
+    //의존성 설정
     public void setPatientListPanel(PatientListPanel patientListPanel) {
         this.patientListPanel = patientListPanel;
     }
@@ -643,11 +655,12 @@ class PatientAddWindow extends JFrame implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-            addPatient();
+        addPatient();
     }
 
     //환자 추가 로직
-    public void addPatient() {
+    private void addPatient() {
+        //팝업을 띄워 되묻고 확인 시 로직 실행
         if (JOptionPane.showConfirmDialog(this, nameField.getText() + " 환자를 추가하시겠습니까?") == 0) {
             String query = "INSERT INTO patient(name, phone, identitynumber, caution, address, bloodType, gender, height, weight) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -656,7 +669,8 @@ class PatientAddWindow extends JFrame implements ActionListener {
 
             try {
                 pstm = conn.prepareStatement(query);
-                if (checkName() && checkLength()) {
+                //이름을 입력했는지, 주민번호 길이가 맞는지 체크
+                if (checkName() && checkIdLength()) {
                     pstm.setString(1, nameField.getText());
                     pstm.setString(2, phoneField.getText().isEmpty() ? null : phoneField.getText());
                     pstm.setString(3, idField1.getText() + "-" + idField2.getText());
@@ -675,29 +689,24 @@ class PatientAddWindow extends JFrame implements ActionListener {
                         JOptionPane.showMessageDialog(null, "추가 실패");
                     }
                 }
-
-                pstm.close();
             } catch (SQLIntegrityConstraintViolationException ex) {
                 JOptionPane.showMessageDialog(null, "이미 추가된 환자입니다");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(null, "키와 몸무게는 숫자를 입력해주세요");
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
+            } finally {
+                try {
+                    pstm.close();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
 
-    public boolean checkLength() {
-        if (idField1.getText().length() != 6 || idField2.getText().length() != 7) {
-            JOptionPane.showMessageDialog(null, "올바른 주민번호를 입력해주세요");
-            idField1.requestFocus();
-            return false;
-        }
-
-        return true;
-    }
-
-    public boolean checkName() {
+    //이름 입력했는지 확인
+    private boolean checkName() {
         if (nameField.getText().isEmpty()) {
             JOptionPane.showMessageDialog(null, "이름을 입력하세요");
             nameField.requestFocus();
@@ -706,7 +715,19 @@ class PatientAddWindow extends JFrame implements ActionListener {
 
         return true;
     }
-    //혈액형 가져오기
+
+    private boolean checkIdLength() {
+        //앞자리와 뒷자리의 길이 확인
+        if (idField1.getText().length() != 6 || idField2.getText().length() != 7) {
+            JOptionPane.showMessageDialog(null, "주민번호를 올바르게 입력해주세요");
+            idField1.requestFocus();
+            return false;
+        }
+
+        return true;
+    }
+
+    //선택한 혈액형에 따라 문자열 반환
     public String getBloodType() {
         if (A.isSelected()) {
             return "A";
@@ -718,6 +739,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
             return "AB";
         }
 
+        //아무것도 선택하지 않았다면 null 반환
         return null;
     }
 }
@@ -732,12 +754,15 @@ class NumberTextField extends JTextField implements KeyListener {
 
     @Override
     public void keyTyped(KeyEvent e) {
+        //입력한 키의 종류를 char로 받아옴
         char c = e.getKeyChar();
 
+        //숫자가 아니라면 입력 중지
         if (!Character.isDigit(c)) {
             e.consume();
         }
 
+        //최대 숫자를 넘었다면 입력 중지
         if (getText().length() >= maxLength) {
             e.consume();
         }
