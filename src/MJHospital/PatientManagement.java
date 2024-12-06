@@ -458,7 +458,7 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
     }
 
     public void modifyPatient() throws SQLException {
-        if (JOptionPane.showConfirmDialog(this, "수정하시겠습니까?") == 0) {
+        if (JOptionPane.showConfirmDialog(null, "수정하시겠습니까?") == 0) {
             String query = "UPDATE patient SET phone = ?, gender = ?, bloodtype = ?, caution = ?, address = ?, height = ?, weight = ? WHERE patientid = ?";
             PreparedStatement pstm = conn.prepareStatement(query);
             pstm.setString(1, phoneField.getText().isEmpty() ? null : phoneField.getText());
@@ -471,10 +471,10 @@ class PatientDetailsPanel extends JPanel implements ActionListener {
             pstm.setInt(8, patientId);
 
             if (pstm.executeUpdate() > 0) {
-                JOptionPane.showMessageDialog(this, "수정 성공");
+                JOptionPane.showMessageDialog(null, "수정 성공");
                 patientConditionPanel.searchPatient();
             } else {
-                JOptionPane.showMessageDialog(this, "수정 실패");
+                JOptionPane.showMessageDialog(null, "수정 실패");
             }
 
             pstm.close();
@@ -668,19 +668,19 @@ class PatientAddWindow extends JFrame implements ActionListener {
                     pstm.setString(9, weightField.getText().isEmpty() ? null : weightField.getText());
 
                     if (pstm.executeUpdate() > 0) {
-                        JOptionPane.showMessageDialog(this, "추가 성공");
+                        JOptionPane.showMessageDialog(null, "추가 성공");
                         patientConditionPanel.searchPatient();
                         dispose();
                     } else {
-                        JOptionPane.showMessageDialog(this, "추가 실패");
+                        JOptionPane.showMessageDialog(null, "추가 실패");
                     }
                 }
 
                 pstm.close();
             } catch (SQLIntegrityConstraintViolationException ex) {
-                JOptionPane.showMessageDialog(this, "이미 추가된 환자입니다");
+                JOptionPane.showMessageDialog(null, "이미 추가된 환자입니다");
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "키와 몸무게는 숫자를 입력해주세요");
+                JOptionPane.showMessageDialog(null, "키와 몸무게는 숫자를 입력해주세요");
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
             }
@@ -689,7 +689,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
 
     public boolean checkLength() {
         if (idField1.getText().length() != 6 || idField2.getText().length() != 7) {
-            JOptionPane.showMessageDialog(this, "올바른 주민번호를 입력해주세요");
+            JOptionPane.showMessageDialog(null, "올바른 주민번호를 입력해주세요");
             idField1.requestFocus();
             return false;
         }
@@ -699,7 +699,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
 
     public boolean checkName() {
         if (nameField.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "이름을 입력하세요");
+            JOptionPane.showMessageDialog(null, "이름을 입력하세요");
             nameField.requestFocus();
             return false;
         }

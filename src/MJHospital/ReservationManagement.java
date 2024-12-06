@@ -210,7 +210,7 @@ class ReservationConditionPanel extends JPanel implements ActionListener {
 
         //시작 날짜가 끝나는 날짜보다 뒤라면
         if (startDay.isAfter(endDay)) {
-            JOptionPane.showMessageDialog(this, "검색하려는 날짜의 범위를 올바르게 지정해주세요");
+            JOptionPane.showMessageDialog(null, "검색하려는 날짜의 범위를 올바르게 지정해주세요");
         } else {
             String query = "SELECT * FROM reservation JOIN patient ON reservation.patientid = patient.patientid JOIN staff ON reservation.staffid = staff.staffid" +
                     " WHERE reservationdate >= '" + startDay + "' and reservationdate <= '" + endDay + "'";
@@ -491,7 +491,7 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             else if (e.getActionCommand().equals("검색")) searchDoctor(doctorField.getText());
             else if (e.getSource() == year || e.getSource() == month) setDate(year, month, day);
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "알 수 없는 오류가 발생하였습니다.");
+            JOptionPane.showMessageDialog(null, "알 수 없는 오류가 발생하였습니다.");
             ex.printStackTrace();
         }
     }
@@ -573,19 +573,19 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
 
     //예약 수정 기능
     public void modifyReservation() throws SQLException {
-        if (JOptionPane.showConfirmDialog(this, "수정하시겠습니까?") == 0) {
+        int reservationYear = Integer.parseInt(year.getSelectedItem().toString());
+        int reservationMonth = Integer.parseInt(month.getSelectedItem().toString());
+        int reservationDay = Integer.parseInt(day.getSelectedItem().toString());
+        LocalDate reservationDate = LocalDate.of(reservationYear, reservationMonth, reservationDay);
+
+        int reservationHour = Integer.parseInt(hour.getSelectedItem().toString());
+        int reservationMin = Integer.parseInt(minute.getSelectedItem().toString());
+        LocalTime reservationTime = LocalTime.of(reservationHour, reservationMin);
+
+        if (JOptionPane.showConfirmDialog(null, "수정하시겠습니까?") == 0 && checkOffDay(reservationDate)) {
             String query = "UPDATE reservation SET reservationdate = ?, reservationtime = ?, staffid = (SELECT staffid FROM staff WHERE name = ?), " +
                     "note = ? WHERE reservationid = ?";
             PreparedStatement pstm = conn.prepareStatement(query);
-
-            int reservationYear = Integer.parseInt(year.getSelectedItem().toString());
-            int reservationMonth = Integer.parseInt(month.getSelectedItem().toString());
-            int reservationDay = Integer.parseInt(day.getSelectedItem().toString());
-            LocalDate reservationDate = LocalDate.of(reservationYear, reservationMonth, reservationDay);
-
-            int reservationHour = Integer.parseInt(hour.getSelectedItem().toString());
-            int reservationMin = Integer.parseInt(minute.getSelectedItem().toString());
-            LocalTime reservationTime = LocalTime.of(reservationHour, reservationMin);
 
             pstm.setString(1, reservationDate.toString());
             pstm.setString(2, reservationTime.toString());
@@ -593,15 +593,34 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             pstm.setString(4, noteArea.getText().isEmpty() ? null : noteArea.getText());
             pstm.setInt(5, reservationId);
             if (pstm.executeUpdate() > 0) {
-                JOptionPane.showMessageDialog(this, "수정 성공");
+                JOptionPane.showMessageDialog(null, "수정 성공");
                 reservationConditionPanel.searchReservation();
             } else {
-                JOptionPane.showMessageDialog(this, "수정 실패");
+                JOptionPane.showMessageDialog(null, "수정 실패");
             }
 
             pstm.close();
         }
     }
+
+    //의사 공휴일 체크
+    public boolean checkOffDay(LocalDate reservationDate) throws SQLException {
+        String query = "SELECT off FROM staff WHERE name = '" + doctorField.getText() + "'";
+        Statement st = conn.createStatement();
+        ResultSet rs = st.executeQuery(query);
+        rs.next();
+        int offDay = Integer.parseInt(rs.getString("off"));
+        if (reservationDate.getDayOfWeek().getValue() == offDay) {
+            JOptionPane.showMessageDialog(null, "그날은 해당 의사분의 휴일입니다");
+            return false;
+        }
+
+        st.close();
+        rs.close();
+
+        return true;
+    }
+
 
     //예약 삭제 기능
     public void deleteReservation() throws SQLException {
@@ -610,10 +629,10 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
             PreparedStatement pstm = conn.prepareStatement(query);
             pstm.setInt(1, reservationId);
             if (pstm.executeUpdate() > 0) {
-                JOptionPane.showMessageDialog(this, "예약 취소 성공");
+                JOptionPane.showMessageDialog(null, "예약 취소 성공");
                 reservationConditionPanel.searchReservation();
             } else {
-                JOptionPane.showMessageDialog(this, "예약 취소 실패");
+                JOptionPane.showMessageDialog(null, "예약 취소 실패");
             }
 
             pstm.close();
@@ -819,7 +838,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     public void actionPerformed(ActionEvent e) {
         try {
             if (e.getActionCommand().equals("추가")) {
-                if (JOptionPane.showConfirmDialog(this, patientField.getText() + " 환자 예약을 추가하시겠습니까?") == 0) {
+                if (JOptionPane.showConfirmDialog(null, patientField.getText() + " 환자 예약을 추가하시겠습니까?") == 0) {
                     addReservation();
                 }
             } else if (e.getSource() == patientSearchButton || e.getSource() == patientField) {
@@ -852,7 +871,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
                 "VALUES ((SELECT patientid FROM patient WHERE identitynumber = ?), (SELECT staffid FROM staff WHERE identitynumber = ?), ?, ?, ?, ?, ?)";
         try {
             PreparedStatement pstm = conn.prepareStatement(query);
-            if (checkDate(reservationDate) && checkField() && checkHoliday(reservationDate)) {
+            if (checkDate(reservationDate) && checkField() && checkOffDay(reservationDate)) {
                 pstm.setString(1, idField.getText());
                 pstm.setString(2, doctorId);
                 pstm.setString(3, noteArea.getText().isEmpty() ? null : noteArea.getText());
@@ -861,19 +880,19 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
                 pstm.setInt(6, isFirst);
                 pstm.setInt(7, 0);
                 if (pstm.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(this, "추가 성공");
+                    JOptionPane.showMessageDialog(null, "추가 성공");
                     reservationConditionPanel.searchReservation();
                     dispose();
                 } else {
-                    JOptionPane.showMessageDialog(this, "추가 실패");
+                    JOptionPane.showMessageDialog(null, "추가 실패");
                 }
             }
             consultation.loadPatientList();
         } catch (SQLIntegrityConstraintViolationException ex) {
-            JOptionPane.showMessageDialog(this, "해당 날짜와 시간에는 이미 예약이 있습니다");
+            JOptionPane.showMessageDialog(null, "해당 날짜와 시간에는 이미 예약이 있습니다");
             ex.printStackTrace();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "키와 몸무게는 숫자를 입력해주세요");
+            JOptionPane.showMessageDialog(null, "키와 몸무게는 숫자를 입력해주세요");
         }
     }
 
@@ -892,10 +911,10 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     //날짜 체크 및 공휴일 체크
     public boolean checkDate(LocalDate reservationDate) {
         if (LocalDate.now().isAfter(reservationDate)) {
-            JOptionPane.showMessageDialog(this, "오늘 이후의 날짜를 선택해주세요");
+            JOptionPane.showMessageDialog(null, "오늘 이후의 날짜를 선택해주세요");
             return false;
         } else if (reservationDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            JOptionPane.showMessageDialog(this, "일요일은 휴무입니다");
+            JOptionPane.showMessageDialog(null, "일요일은 휴무입니다");
             return false;
         }
 
@@ -905,19 +924,20 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
     //환자 필드, 의사 필드 빈 칸 체크
     public boolean checkField() {
         if (patientField.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "환자 이름을 입력하세요");
+            JOptionPane.showMessageDialog(null, "환자 이름을 입력하세요");
             patientField.requestFocus();
             return false;
         } else if (doctorField.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "담당의 이름을 입력하세요");
+            JOptionPane.showMessageDialog(null, "담당의 이름을 입력하세요");
             doctorField.requestFocus();
             return false;
         }
+
         return true;
     }
 
     //의사 공휴일 체크
-    public boolean checkHoliday(LocalDate reservationDate) throws SQLException {
+    public boolean checkOffDay(LocalDate reservationDate) throws SQLException {
         String query = "SELECT off FROM staff WHERE identitynumber = '" + doctorId + "'";
         Statement st = conn.createStatement();
         ResultSet rs = st.executeQuery(query);
@@ -927,6 +947,9 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
             JOptionPane.showMessageDialog(null, "그날은 해당 의사분의 휴일입니다");
             return false;
         }
+
+        st.close();
+        rs.close();
 
         return true;
     }
@@ -952,6 +975,10 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         String[] columnNames = {"환자 이름", "성별", "주민번호"};
         setTable(columnNames, dataVector);
 
+        table.getColumnModel().getColumn(0).setPreferredWidth(70);
+        table.getColumnModel().getColumn(1).setPreferredWidth(30);
+        table.getColumnModel().getColumn(2).setPreferredWidth(100);
+
         st.close();
         rs.close();
     }
@@ -976,6 +1003,10 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         String[] columnNames = {"의사 이름", "전공", "주민번호"};
         setTable(columnNames, dataVector);
 
+        table.getColumnModel().getColumn(0).setPreferredWidth(50);
+        table.getColumnModel().getColumn(1).setPreferredWidth(50);
+        table.getColumnModel().getColumn(2).setPreferredWidth(100);
+
         st.close();
         rs.close();
     }
@@ -986,9 +1017,6 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         table = new JTable(tableModel);
         table.addMouseListener(this);
 
-        table.getColumnModel().getColumn(0).setPreferredWidth(70);
-        table.getColumnModel().getColumn(1).setPreferredWidth(30);
-        table.getColumnModel().getColumn(2).setPreferredWidth(100);
         table.setDefaultEditor(Object.class, null);
 
         for (Vector<String> row : dataVector) {
