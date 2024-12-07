@@ -690,6 +690,7 @@ class PatientAddWindow extends JFrame implements ActionListener {
                     }
                 }
             } catch (SQLIntegrityConstraintViolationException ex) {
+                //같은 주민번호가 이미 있을 때
                 JOptionPane.showMessageDialog(null, "이미 추가된 환자입니다");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(null, "키와 몸무게는 숫자를 입력해주세요");
@@ -716,8 +717,8 @@ class PatientAddWindow extends JFrame implements ActionListener {
         return true;
     }
 
+    //주민번호 앞자리와 뒷자리의 길이 확인
     private boolean checkIdLength() {
-        //앞자리와 뒷자리의 길이 확인
         if (idField1.getText().length() != 6 || idField2.getText().length() != 7) {
             JOptionPane.showMessageDialog(null, "주민번호를 올바르게 입력해주세요");
             idField1.requestFocus();
