@@ -581,7 +581,7 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
         int reservationMin = Integer.parseInt(minute.getSelectedItem().toString());
         LocalTime reservationTime = LocalTime.of(reservationHour, reservationMin);
 
-        if (JOptionPane.showConfirmDialog(null, "수정하시겠습니까?") == 0 && checkOffDay(reservationDate)) {
+        if (JOptionPane.showConfirmDialog(null, "수정하시겠습니까?") == 0 && checkOffDay(reservationDate) && checkDate(reservationDate)) {
             String query = "UPDATE reservation SET reservationdate = ?, reservationtime = ?, staffid = (SELECT staffid FROM staff WHERE name = ?), " +
                     "note = ? WHERE reservationid = ?";
             PreparedStatement pstm = conn.prepareStatement(query);
@@ -620,6 +620,19 @@ class ReservationDetailPanel extends JPanel implements ActionListener, MouseList
 
         st.close();
         rs.close();
+
+        return true;
+    }
+
+    //날짜 체크 및 공휴일 체크
+    private boolean checkDate(LocalDate reservationDate) {
+        if (LocalDate.now().isAfter(reservationDate)) {
+            JOptionPane.showMessageDialog(null, "오늘 이후의 날짜를 선택해주세요");
+            return false;
+        } else if (reservationDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            JOptionPane.showMessageDialog(null, "일요일은 휴무입니다");
+            return false;
+        }
 
         return true;
     }
