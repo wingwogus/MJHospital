@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.ArrayList;
 import com.toedter.calendar.JCalendar;
 import com.toedter.calendar.JDayChooser;
+
 import java.util.Calendar;
 
 public class ConsultationManagement extends JPanel {
