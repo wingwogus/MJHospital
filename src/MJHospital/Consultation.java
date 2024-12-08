@@ -125,7 +125,7 @@ public class Consultation extends JPanel {
                     """;
 
             PreparedStatement pstmt = connection.prepareStatement(query);
-            pstmt.setString(1, today.plusDays(1).toString());
+            pstmt.setString(1, today.toString());
             pstmt.setString(2, currentStaffId);
 
             ResultSet rs = pstmt.executeQuery();
