@@ -120,12 +120,12 @@ public class Consultation extends JPanel {
                         SELECT r.patientid, r.reservationtime, p.name, r.note, r.status, r.reservationdate
                         FROM reservation r
                         JOIN patient p ON r.patientid = p.patientid
-                        WHERE r.reservationdate = ? AND staffid = ? 
+                        WHERE r.reservationdate = ? AND staffid = ?
                         ORDER BY r.reservationtime ASC
                     """;
 
             PreparedStatement pstmt = connection.prepareStatement(query);
-            pstmt.setString(1, today.toString());
+            pstmt.setString(1, today.plusDays(1).toString());
             pstmt.setString(2, currentStaffId);
 
             ResultSet rs = pstmt.executeQuery();
@@ -149,7 +149,7 @@ public class Consultation extends JPanel {
             int patientId = Integer.parseInt(selected.split(" - ")[0]);
 
             String query = """
-                SELECT DISTINCT c.consultationdate
+                SELECT c.consultationdate
                 FROM consultation c
                 WHERE c.patientid = ?
                 ORDER BY c.consultationdate DESC
@@ -295,12 +295,23 @@ public class Consultation extends JPanel {
     private static class PatientListCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-            Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            JTextArea textArea = new JTextArea(value.toString());
+            textArea.setWrapStyleWord(true); // 단어 단위로 줄바꿈
+            textArea.setLineWrap(true); // 자동 줄바꿈 활성화
+            textArea.setOpaque(true); // 배경색 보이도록 설정
+            textArea.setFont(list.getFont()); // 리스트의 폰트에 맞춤
+            textArea.setBackground(isSelected ? list.getSelectionBackground() : list.getBackground());
+            textArea.setForeground(isSelected ? list.getSelectionForeground() : list.getForeground());
+            textArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // 패딩 추가
+
+            // 진료가 완료된 항목의 색상을 회색으로 변경
             String text = value.toString();
             if (text.contains("(완료)")) {
-                c.setForeground(Color.GRAY); // 완료된 항목은 회색 처리
+                textArea.setForeground(Color.GRAY); // 회색 처리
             }
-            return c;
+
+            return textArea;
         }
     }
+
 }
