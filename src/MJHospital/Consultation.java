@@ -9,10 +9,11 @@ import java.util.ArrayList;
 import java.util.Vector;
 
 public class Consultation extends JPanel {
-    private JList<String> patientList;
-    private DefaultListModel<String> patientListModel;
-    private JComboBox<String> datePickComboBox, diseaseComboBox;
-    private JTextArea symptomsArea, doctorNoteArea, prescriptionArea, diseaseArea, NsymptomsArea, NdoctorNoteArea, NprescriptionArea;
+    private JList<String> patientList;// 환자 목록 표시
+    private DefaultListModel<String> patientListModel; //환자 목록 데이터 관리
+    private JComboBox<String> datePickComboBox, diseaseComboBox; // 질병, 날짜 콤보박스
+    private JTextArea symptomsArea, doctorNoteArea, prescriptionArea; //진료 작성
+    private JTextArea diseaseArea, NsymptomsArea, NdoctorNoteArea, NprescriptionArea; //진료 기록 출력
 
     private Connection connection;
     public String currentStaffId; // 로그인한 사용자 ID
@@ -31,11 +32,13 @@ public class Consultation extends JPanel {
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.setPreferredSize(new Dimension(300, 0));
         leftPanel.setBorder(BorderFactory.createTitledBorder("환자 목록"));
+
+
         patientListModel = new DefaultListModel<>();
         patientList = new JList<>(patientListModel);
         patientList.setCellRenderer(new PatientListCellRenderer());
         loadPatientList();
-        patientList.addListSelectionListener(e -> loadPatientDateRecords());
+        patientList.addListSelectionListener(e -> loadPatientDateRecords()); //선택 이벤트 처리
         leftPanel.add(new JScrollPane(patientList), BorderLayout.CENTER);
         add(leftPanel, BorderLayout.WEST);
 
@@ -48,7 +51,7 @@ public class Consultation extends JPanel {
         JPanel datePickPanel = new JPanel(new BorderLayout());
         datePickPanel.setBorder(BorderFactory.createTitledBorder("날짜 선택"));
         datePickComboBox = new JComboBox<>();
-        datePickComboBox.addActionListener(e -> loadPatientConsultationRecord());
+        datePickComboBox.addActionListener(e -> loadPatientConsultationRecord()); //날짜 선택시, 날짜에 맞는 환자의 진료기록 출력 이벤트
         datePickPanel.add(datePickComboBox, BorderLayout.CENTER);
 
         //진료 기록 출력
@@ -99,7 +102,7 @@ public class Consultation extends JPanel {
 
         // 저장 버튼
         JButton saveButton = new JButton("저장");
-        saveButton.addActionListener(e -> saveMedicalRecord());
+        saveButton.addActionListener(e -> saveMedicalRecord()); // 저장 버튼 누를시 이벤트 발생
 
         // 구성 추가
         rightPanel.add(diseasePanel, BorderLayout.NORTH);
@@ -110,12 +113,14 @@ public class Consultation extends JPanel {
         setVisible(true);
     }
 
+
+    // 환자 목록 로드
     public void loadPatientList() {
         try {
-            patientListModel.clear();
+            patientListModel.clear(); //기존 목록 초기화
+            LocalDate today = LocalDate.now(); //오늘 날짜로 지정
 
-            LocalDate today = LocalDate.now();
-
+            // 오늘 날짜로 예약된 환자 목록 조회 SQL 쿼리문
             String query = """
                         SELECT r.patientid, r.reservationtime, p.name, r.note, r.status, r.reservationdate
                         FROM reservation r
@@ -131,8 +136,10 @@ public class Consultation extends JPanel {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
+                // 환자 정보를 가져와서 환자 목록에 추가
                 String entry = rs.getInt("patientid") + " - " + rs.getString("name") +
                         " (" + rs.getString("reservationtime") + ", " + rs.getString("note") + ")";
+                // reservation 테이블에서 status = 1일 경우 (완료)표시 추가
                 patientListModel.addElement(entry + (rs.getInt("status") == 1 ? " (완료)" : ""));
             }
         } catch (SQLException e) {
@@ -140,13 +147,15 @@ public class Consultation extends JPanel {
         }
     }
 
+
+// 환자의 진료날짜 기록 로드
     private void loadPatientDateRecords() {
         try {
             datePickComboBox.removeAllItems(); // 기존 데이터 초기화
-            String selected = patientList.getSelectedValue();
+            String selected = patientList.getSelectedValue(); //리스트에서 하나의 환자를 선택할 경우 해당 환자의 데이터 가져옴
             if (selected == null) return;
 
-            int patientId = Integer.parseInt(selected.split(" - ")[0]);
+            int patientId = Integer.parseInt(selected.split(" - ")[0]); //선택된 환자의 id 추출
 
             String query = """
                 SELECT c.consultationdate
@@ -156,7 +165,7 @@ public class Consultation extends JPanel {
             """;
 
             PreparedStatement pstmt = connection.prepareStatement(query);
-            pstmt.setInt(1, patientId);
+            pstmt.setInt(1, patientId); // sql 쿼리문의 첫번째 매개변수에 추출한 id 값을 바인딩
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
@@ -177,7 +186,7 @@ public class Consultation extends JPanel {
         }
     }
 
-
+    // 콤보박스로 선택된 날짜의 환자 진료기록 로드
     private void loadPatientConsultationRecord() {
         try {
             String selected = patientList.getSelectedValue();
@@ -217,7 +226,7 @@ public class Consultation extends JPanel {
         }
     }
 
-
+    // 질병리스트 로드
     private void loadDiseaseList() {
         try {
             String query = "SELECT diseaseid, diseasename FROM disease";
@@ -231,6 +240,7 @@ public class Consultation extends JPanel {
         }
     }
 
+    // 작성된 진료 기록 저장
     private void saveMedicalRecord() {
         try {
             String selectedPatient = patientList.getSelectedValue();
@@ -289,6 +299,10 @@ public class Consultation extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(new JLabel(label), BorderLayout.NORTH);
         panel.add(new JScrollPane(textArea), BorderLayout.CENTER);
+
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+
         return panel;
     }
 
