@@ -826,6 +826,7 @@ class ReservationAddWindow extends JFrame implements ActionListener, MouseListen
         mainPanel.add(cautionLabel);
 
         noteArea = new JTextArea(15, 13);
+        noteArea.setLineWrap(true);
         noteArea.setBounds(xValue + labelWidth, yValue + 5 * spacing, fieldWidth, height * 3);
         mainPanel.add(noteArea);
 
